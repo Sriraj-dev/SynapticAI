@@ -48,7 +48,7 @@ app.route("/askAI", askAIRouter)
 
 serve({
   fetch: app.fetch,
-  port: 3000,
+  port: process.env.PORT? parseInt(process.env.PORT) : 3000
 })
 
 console.log(`SynapticAI server is running at ${process.env.PORT} in ${process.env.ENVIRONMENT} environment`)
