@@ -14,7 +14,7 @@ import { getWebsiteContent } from '../utils/utility_methods';
 import {YoutubeTranscript} from 'youtube-transcript'
 
 // Cache to store the websites content, to avoid frequent scraping 
-//TODO: Use Storage like Redis for this purpose as we anyhow have to use it for background tasks as well
+//TODO: Figure out how to store this in redis like storage 
 const websiteDataCache = new LRUCache<string, { vectorIndex: VectorStoreIndex; summaryIndex: SummaryIndex }>({
   max: 100, // Max 100 sessions
   ttl: 3600 * 1000, // 1 hour TTL
@@ -72,6 +72,7 @@ export const addNote = new DynamicStructuredTool({
         content: content,
       } as NoteCreateRequest
 
+      //TODO: Create a background worker task for this function:
        (async () => {
         try {
           await NotesController.createNote(userId, newNote);
@@ -108,7 +109,7 @@ export const addMultipleTasks = new DynamicStructuredTool({
         owner_id: userId,
       } as NewTaskRequest));
 
-      // Offload task creation to background (non-blocking), later we can add worked threads to handle these jobs
+      // TODO:we can add worked threads to handle these jobs
       Promise.all(
         newTasks.map((task) => TaskController.addTask(task))
       ).catch((err) => {
@@ -148,6 +149,7 @@ export const addSingleTask = new DynamicStructuredTool({
         owner_id: userId,
       } as NewTaskRequest
 
+      //TODO: Move this to background worker
       TaskController.addTask(newTask).then(()=>{
         console.log("New task created for user - ", userId)
       }).catch(
