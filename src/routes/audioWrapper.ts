@@ -12,6 +12,13 @@ TODO:
 2. Can be run in a multiple containers with load balancers when it reaches that stage
 */
 
+/*
+TODO: 
+If Free User, Check if the user has reached the limit of say 1000 characters per day & disallow him to do voice chat.
+If Paid User, Then we can go unlimited.
+-- May be we can use redis in the middleware to quickly handle this before establishing the websocket connection.
+*/
+
 wsRouter.get('/greeting-agent', upgradeWebSocket(greetingAgentHandler))
 
 wsRouter.get('/askAI', authMiddleware, addSessionDetails , upgradeWebSocket(() => ({

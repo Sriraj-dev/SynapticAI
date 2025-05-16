@@ -31,13 +31,15 @@ export class STT_Provider{
     private dgSocket : WebSocket | null = null;
     private headers : Record<string, string>;
 
+    private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
     constructor(API_KEY : string){
         this.headers = {
             Authorization: `Token ${API_KEY}`,
         }
     }
 
-    public connect(ws:WSContext, onSTTEvent : (event : AudioModelResponse | null) => void){
+    public connect(ws:WSContext, onSTTEvent : (event : AudioModelResponse) => void){
         this.dgSocket = new WebSocket("wss://api.deepgram.com/v1/listen?language=en&model=nova-3&interim_results=true&utterance_end_ms=1000&vad_events=true&endpointing=300"
         ,{
             headers: this.headers
@@ -88,29 +90,38 @@ export class STT_Provider{
                     break;
     
                 default:
-                    console.warn("⚠️ Unknown event type from Deepgram:", data.type);
-                    message = null
-                    // message.type = AudioModelResponseType.WARNING;
-                    // message.data = `Unknown event type: ${data.type}`;
+                    console.warn("⚠️ Unknown event type from Deepgram:", data);
+                    message.type = AudioModelResponseType.WARNING;
+                    message.data = `Unknown event type: ${data.type}`;
             }
             } catch (e) {
                 console.error("❌ Error parsing Deepgram message:", e);
                 message = {type: AudioModelResponseType.ERROR, data: `Error parsing Deepgram message: ${e}`}
             }
 
-            onSTTEvent(message);
+            if(message) onSTTEvent(message);
         }
 
         this.dgSocket.onerror = (err: any) => {
             console.error("❌ Deepgram socket error:", err);
             let message = {type: AudioModelResponseType.ERROR, data: `Deepgram Socket Error : ${err}`}
             onSTTEvent(message);
+            clearInterval(this.heartbeatInterval as ReturnType<typeof setInterval>);
         };
 
         this.dgSocket.onclose = () => {
             console.log("🔒 Deepgram socket closed");
+            clearInterval(this.heartbeatInterval as ReturnType<typeof setInterval>);
+            onSTTEvent({type: AudioModelResponseType.CLOSED, data: "Deepgram Socket got closed!"})
             ws.readyState === WebSocket.OPEN ? ws.close() : null;
         };
+
+        this.heartbeatInterval = setInterval(()=>{
+            if(this.dgSocket && this.dgSocket.readyState === WebSocket.OPEN){
+                console.log("📤 Hearbeat sent to Deepgram");
+                this.dgSocket.send(JSON.stringify({type: "KeepAlive"}));
+            }
+        }, 8000)
     }
 
     sendAudio(data: Buffer | Uint8Array) {

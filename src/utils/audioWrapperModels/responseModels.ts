@@ -11,6 +11,8 @@ export enum AudioModelResponseType{
     COMPLETE_AUDIO_RESPONSE = "COMPLETE_AUDIO_RESPONSE",
     CLOSED = "CLOSED",
     WARNING = "WARNING",
+    STTERROR = "STTERROR",
+    TTSERROR = "TTSERROR",
     ERROR = "ERROR"
 }
 
