@@ -4,20 +4,16 @@ import {agent} from "../services/agentGraph"
 import { AgentRequest } from "../utils/apiModels/requestModels";
 import { AgentEvent } from "../utils/apiModels/responseModels";
 import { MessagesAnnotation } from "@langchain/langgraph";
-import { LRUCache } from "lru-cache";
-
-//TODO: Need a reliable source like Redis for caching chat sessions
-const ChatHistoryCache = new LRUCache<string, BaseMessage[]>({
-  max: 100, // Max 100 chat sessions are only stored
-  ttl: 3600 * 1000, // 1 hour TTL
-})
+import { RedisStorage } from "../services/redis/storage";
+import { preprocessAgentContext } from "../utils/utility_methods";
 
 export const AgentController = {
-
     async *invokeAgent(userId : string, sessionId:string, request : AgentRequest):AsyncGenerator<AgentEvent>{
-        //Get the cached message History for the userId & sessionId
-        const chatHistory = ChatHistoryCache.get(`${userId}-${sessionId}`) || [];
+        
+        const cachedData = await RedisStorage.getItem(`${userId}-${sessionId}`);
+        let chatHistory = JSON.parse(cachedData || '[]') as BaseMessage[];
 
+        chatHistory = await preprocessAgentContext({messages: chatHistory})
         const initialState = {messages:[...chatHistory ,new HumanMessage(request.userMessage)]}
 
         //Invoke the graph with the chat history and the new Human message.
@@ -42,7 +38,6 @@ export const AgentController = {
                 for (const message of chunkMessages) {
                     newMessages.push(message)
 
-                    ChatHistoryCache.set(`${userId}-${sessionId}`, newMessages);
                     if (isToolMessage(message)) {
                         console.log(message)
                         yield {
@@ -75,7 +70,7 @@ export const AgentController = {
             }
         }
 
-        ChatHistoryCache.set(`${userId}-${sessionId}`, [...initialState.messages,...newMessages])
+        //Save messages into redis:
+        await RedisStorage.setItemAsync(`${userId}-${sessionId}`, JSON.stringify([...initialState.messages,...newMessages]), 3600)
     }
-
 }

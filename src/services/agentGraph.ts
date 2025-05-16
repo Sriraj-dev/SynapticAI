@@ -6,7 +6,7 @@ import { getCurrentDate, getCurrentUserInformation, addNote, addMultipleTasks, a
 import {ToolNode} from '@langchain/langgraph/prebuilt'
 import { rootModel } from './aiModels';
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
-import { HumanMessage, AIMessage, isAIMessageChunk, BaseMessage } from "@langchain/core/messages";
+import {  AIMessage } from "@langchain/core/messages";
 import { AgentSystemPrompt } from '../utils/agentPrompts';
 
 //Create Tools
@@ -49,7 +49,6 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
 }
 
 //Build Graph
-//TODO : You can add a preprocess Node - which checks the context window size
 //TODO: You can add a preprocess Node - which transcripts the users audio.
 //TODO: You can add a postprocess Node - If we want to conver the response into audio using ElevenLabs
 const workflow = new StateGraph(MessagesAnnotation)

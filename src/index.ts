@@ -1,5 +1,4 @@
 import './config/env'
-import { serve } from '@hono/node-server'
 import { prettyJSON } from 'hono/pretty-json'
 import { logger } from 'hono/logger'
 import { Hono } from 'hono'
@@ -10,6 +9,7 @@ import { AppError } from './utils/errors'
 import { StatusCodes } from './utils/statusCodes'
 import taskRouter from './routes/task'
 import askAIRouter from './routes/askAI'
+import {wsRouter, websocket} from './routes/audioWrapper'
 
 const app = new Hono()
 
@@ -45,10 +45,14 @@ app.route('/callback', callbackRouter)
 app.route('/notes',notesRouter)
 app.route('/tasks', taskRouter)
 app.route("/askAI", askAIRouter)
+app.route("/audioWrapper", wsRouter)
 
-serve({
+Bun.serve({
   fetch: app.fetch,
+  websocket,
   port: process.env.PORT? parseInt(process.env.PORT) : 3000
 })
 
-console.log(`SynapticAI server is running at ${process.env.PORT} in ${process.env.ENVIRONMENT} environment`)
+console.log(`✅ SynapticAI server is running at ${process.env.PORT} in ${process.env.ENVIRONMENT} environment`)
+
+
