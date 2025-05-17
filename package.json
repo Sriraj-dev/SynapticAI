@@ -1,8 +1,5 @@
 {
   "scripts": {
-    "start": "bun src/index.ts",
-    "dev": "ENVIRONMENT=development bun src/index.ts",
-    "prod": "ENVIRONMENT=PROD bun src/index.ts",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:apply": "drizzle-kit up",
@@ -13,16 +10,12 @@
     "@clerk/backend": "^1.26.0",
     "@deepgram/sdk": "^4.1.0",
     "@hono/clerk-auth": "^2.0.0",
-    "@hono/node-server": "^1.14.0",
-    "@hono/node-ws": "^1.1.4",
     "@langchain/core": "^0.3.53",
     "@langchain/langgraph": "^0.2.68",
     "@langchain/openai": "^0.5.10",
     "@llamaindex/core": "^0.6.2",
     "@neondatabase/serverless": "^1.0.0",
-    "axios": "^1.9.0",
     "crawlee": "^3.13.2",
-    "cross-fetch": "^4.1.0",
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.30.6",
     "drizzle-orm": "^0.41.0",
@@ -33,7 +26,6 @@
     "llamaindex": "^0.10.2",
     "lru-cache": "^11.1.0",
     "playwright": "^1.52.0",
-    "pnpm": "^10.7.1",
     "ws": "^8.18.2",
     "youtube-transcript": "^1.2.1",
     "zod": "^3.24.2"
