@@ -1,0 +1,25 @@
+
+export enum AudioModelResponseType{
+    CONNECTED = "CONNECTED",
+    AUDIO_STARTED = "AUDIO_STARTED",
+    INTERIM_TRANSCRIPT = "INTERIM_TRANSCRIPT",
+    FINAL_TRANSCRIPT = "FINAL_TRANSCRIPT",
+    AUDIO_ENDED = "AUDIO_ENDED",
+    PARTIAL_TEXT_RESPONSE = "PARTIAL_TEXT_RESPONSE",
+    COMPLETE_TEXT_RESPONSE = "COMPLETE_TEXT_RESPONSE",
+    PARTIAL_AUDIO_RESPONSE = "PARTIAL_AUDIO_RESPONSE",
+    COMPLETE_AUDIO_RESPONSE = "COMPLETE_AUDIO_RESPONSE",
+    CLOSED = "CLOSED",
+    WARNING = "WARNING",
+    STTERROR = "STTERROR",
+    TTSERROR = "TTSERROR",
+    ERROR = "ERROR"
+}
+
+
+export interface AudioModelResponse{
+    type: AudioModelResponseType,
+    data: string,
+    audio?: any 
+}
+//TODO: Define the type of audio data, after implementing TTS

@@ -1,4 +1,7 @@
+import { MessagesAnnotation } from "@langchain/langgraph";
 import { CheerioCrawler, PlaywrightCrawler, RequestQueue } from "crawlee";
+import { rootModel } from "../services/aiModels";
+import { AIMessage, BaseMessage, HumanMessage, isHumanMessage, ToolMessage } from "@langchain/core/messages";
 
 //TODO: This needs chromium browser to be installed on the server.
 export async function getWebsiteContent(url: string) {
@@ -49,3 +52,31 @@ export async function getWebsiteContent(url: string) {
     }
   }
   
+
+export async function preprocessAgentContext({ messages } : typeof MessagesAnnotation.State){
+
+  //TODO: If required, Modify this function in the following scenarios : 
+  // 1. Cost is increasing to handle chat messages
+  // 2. Agent is not able to perform well due to lack of context.
+  const recentMessages = []
+  let conv_count_req = 8
+
+  for(let i = messages.length - 1; i >= 0; i--){
+    const message = messages[i]
+
+    if(conv_count_req > 0) recentMessages.unshift(message)
+    else break
+
+    if(message.id?.includes("HumanMessage")) conv_count_req -=1
+  }
+
+  return recentMessages
+  
+  // const recentMessages = await trimMessages(messages,{
+  //   maxTokens : 300,
+  //   strategy: "last",
+  //   tokenCounter: rootModel,
+  // })
+
+  // return recentMessages
+}
