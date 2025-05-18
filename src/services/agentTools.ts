@@ -12,6 +12,7 @@ import { websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from '../utils/agentPrompts'
 import { getWebsiteContent } from '../utils/utility_methods';
 import {YoutubeTranscript} from 'youtube-transcript'
+import { WorkerService } from './WorkerService/worker_service';
 
 // Cache to store the websites content, to avoid frequent scraping 
 //TODO: Figure out how to store this in redis like storage 
@@ -212,7 +213,7 @@ export const WebsiteQueryTool = new DynamicStructuredTool({
       }else{
         console.log(`Could not fetch ${url} from cache`)
         // Use crawlee to get the websites content .
-        const content = await getWebsiteContent(url);
+        const content = await WorkerService.fetchWebsiteContent(url)
         if(content.length == 0){
           return "Sorry, Unable to fetch the content of the website, You can highlight the text on your browser and ask your query, I will be happy to answer"
         }

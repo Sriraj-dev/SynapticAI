@@ -82,7 +82,7 @@ if __name__ == "__main__":
        user_message = "Can you please give me a gist of this website?"
     REQUEST_BODY = {
         "userMessage": user_message,
-        "url": "https://www.youtube.com/watch?v=yZyV-uo5Xu4&ab_channel=AkshayPachaar",
+        "url": "https://editorjs.io/",
         # "context": {"key": "value"}
     }
     # Run the test
