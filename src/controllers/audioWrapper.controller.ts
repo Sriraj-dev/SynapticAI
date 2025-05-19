@@ -158,3 +158,8 @@ export const greetingAgentHandler : any = () => {
 }
 
 
+
+export const SynapticAgentHandler : any = () => {
+    
+}
+
