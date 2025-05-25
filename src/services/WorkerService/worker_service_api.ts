@@ -2,7 +2,8 @@ import { AppError } from "../../utils/errors"
 import { StatusCodes } from "../../utils/statusCodes"
 
 
-export const WorkerService = {
+//To Handle the api calls to the worker service
+export const WorkerServiceApi = {
     async fetchWebsiteContent (url : string): Promise<string> {
         try {
             const baseUrl = process.env.WORKER_SERVICE_URL
@@ -15,6 +16,7 @@ export const WorkerService = {
             }
       
             const data = await response.json()
+            console.log(`Worker service responded with content: ${data.content}`)
             return data.content || ''
         } catch (err) {
             throw new AppError(`Failed to fetch content from worker service ${err}`, StatusCodes.INTERNAL_SERVER_ERROR)

@@ -50,7 +50,8 @@ app.route("/audioWrapper", wsRouter)
 Bun.serve({
   fetch: app.fetch,
   websocket,
-  port: process.env.PORT? parseInt(process.env.PORT) : 3000
+  port: process.env.PORT? parseInt(process.env.PORT) : 3000,
+  idleTimeout: 180 //3 minutes
 })
 
 console.log(`✅ SynapticAI server is running at ${process.env.PORT} in ${process.env.ENVIRONMENT} environment`)

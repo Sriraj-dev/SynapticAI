@@ -1,4 +1,4 @@
 export interface AgentEvent {
-    type: "message" | "tool" | "complete" | "error";
+    type: "message" | "tool" | "stream" | "notes-link" |"complete" | "error";
     data: any;
 }

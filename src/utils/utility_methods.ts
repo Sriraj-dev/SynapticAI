@@ -1,7 +1,8 @@
 import { MessagesAnnotation } from "@langchain/langgraph";
 import { CheerioCrawler, PlaywrightCrawler, RequestQueue } from "crawlee";
+import {encoding_for_model, TiktokenModel} from "tiktoken";
 import { rootModel } from "../services/aiModels";
-import { AIMessage, BaseMessage, HumanMessage, isHumanMessage, ToolMessage } from "@langchain/core/messages";
+import { Note } from "./models";
 
 //TODO: This needs chromium browser to be installed on the server.
 export async function getWebsiteContent(url: string) {
@@ -77,15 +78,45 @@ export async function preprocessAgentContext({ messages } : typeof MessagesAnnot
   }
 
   return recentMessages
-  
-  // const recentMessages = await trimMessages(messages,{
-  //   maxTokens : 300,
-  //   strategy: "last",
-  //   tokenCounter: rootModel,
-  // })
-
-  // return recentMessages
-
 }
 
+
+export async function truncateNotesByTokenLimit(notes : Note[], MAX_TOKEN_LIMIT : number) : Promise<{result : string, trimmed : boolean}>{
+  let tokenCount = 0
+  let selected_objects = []
+  let trimmed = false
+
+  for(const note of notes){
+    const objString = `Title: ${note.title}\nContent: ${note.content}\nUpdatedAt:${note.createdAt?.toDateString()}`
+    const estimatedTokens = await estimateTokens(objString, rootModel.model as TiktokenModel)
+
+    if(tokenCount + estimatedTokens > MAX_TOKEN_LIMIT){
+      trimmed = true
+      break;
+    }
+    tokenCount += estimatedTokens
+
+
+    selected_objects.push(objString)
+  }
+
+  return {
+    result : selected_objects.join("\n\n"),
+    trimmed
+  }
+}
+
+
+async function estimateTokens(text: string, model : TiktokenModel): Promise<number> {
+  try {
+    const encoding = encoding_for_model(model);
+    const encoded = encoding.encode(text);
+    encoding.free();
+
+    return encoded.length;
+  } catch (error) {
+    console.error("Error estimating tokens:", error);
+    throw error;
+  }
+}
 

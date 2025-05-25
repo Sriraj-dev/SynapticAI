@@ -1,8 +1,8 @@
 
-import { eq } from 'drizzle-orm'
+import { eq, gte, lte, sql } from 'drizzle-orm'
 import { db } from '../db/index'
 import {AccessLevel, AccessStatus, noteAccess, notes, users} from '../db/schema'
-import { NewNote, Note, NoteAccess } from '../utils/models'
+import { NewNote, Note, NoteAccess, SemanticNote, SemanticSearchResponse } from '../utils/models'
 import { and } from 'drizzle-orm'
 
 
@@ -24,6 +24,41 @@ export const NotesRepository = {
             return userNotes
         }catch(err){
             console.log(`Unable to get the notes for the user : ${userId}, Error : ${err}`)
+            throw err;
+        }
+    },
+
+    async getNotesByDateRange(start_date: Date, end_date: Date, userId: string) : Promise<Note[]>{
+        try{
+            const userNotes = await db.select().from(notes).where(
+                and(
+                    eq(notes.owner_id, userId),
+                    gte(notes.updatedAt, start_date),
+                    lte(notes.updatedAt, end_date)
+                )
+            )
+
+            return userNotes
+        }catch(err){
+            console.log(`❌ Unable to get the notes for the user : ${userId}, Error : ${err}`)
+            throw err;
+        }
+    },
+
+    async getSemanticNoteChunks(queryEmbedding: string, userId:string) : Promise<SemanticSearchResponse[]>{
+        try{
+            
+            const results = await db.execute(
+                sql`select note_id, chunk_index, total_chunks, content, (1 - (embedding_v2 <=> ${queryEmbedding})) * 100 as similarity
+                  from semantic_notes
+                  where user_id = ${userId}
+                  order by similarity desc
+                  limit 20`
+            )
+
+            return results.rows as SemanticSearchResponse[] 
+        }catch(err){
+            console.log(`❌ Unable to get the semantic notes, Error : ${err}`)
             throw err;
         }
     },

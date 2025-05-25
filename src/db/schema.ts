@@ -35,7 +35,9 @@ export enum NoteStatusLevel{
     Creating = 'Creating',
     Memorizing = 'Memorizing',
     Updating = 'Updating',
-    Completed = 'Completed'
+    Completed = 'Completed',
+    FailedToMemorize = 'Failed To Memorize',
+    FailedToCreate = 'Failed To Create',
 }
 
 // Users Table
@@ -54,6 +56,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp().defaultNow(),
 });
 
+//notes table
 export const notes = pgTable("notes", {
   uid: uuid().defaultRandom().primaryKey(),
   owner_id: text().references(() => users.uid, {onDelete: "cascade"}).notNull(),
@@ -65,6 +68,34 @@ export const notes = pgTable("notes", {
   updatedAt: timestamp().defaultNow(),
 })
 
+//embeddings table
+/*
+Look at ./vectordb_schema.ts
+*/
+
+export const userUsageMetrics = pgTable("user_usage_metrics", {
+    userId: text().primaryKey().references(() => users.uid, {onDelete: "cascade"}).notNull(),
+
+    total_semantic_tokens: integer().default(0).notNull(),
+    today_semantic_tokens: integer().default(0).notNull(),
+
+    total_chat_tokens: integer().default(0).notNull(),
+    today_chat_tokens: integer().default(0).notNull(),
+
+    total_voice_tokens: integer().default(0).notNull(),
+    today_voice_tokens: integer().default(0).notNull(),
+
+    total_internet_calls: integer().default(0).notNull(),
+    today_internet_calls: integer().default(0).notNull(),
+
+    total_semantic_queries: integer().default(0).notNull(),
+    today_semantic_queries: integer().default(0).notNull(),
+
+    lastResetAt: timestamp().defaultNow(),
+    updatedAt: timestamp().defaultNow(),
+})
+
+//noteAccess Table
 export const noteAccess = pgTable("note_access",{
     uid: uuid("id").defaultRandom().primaryKey(),
     note_id: uuid().references(() => notes.uid, {onDelete: "cascade"}).notNull(),
@@ -76,6 +107,7 @@ export const noteAccess = pgTable("note_access",{
     updatedAt: timestamp().defaultNow(),
 })
 
+//Tasks Table
 export const tasks = pgTable("tasks", {
   uid: uuid().defaultRandom().primaryKey(),
   owner_id: text().references(() => users.uid, {onDelete: "cascade"}).notNull(),
@@ -87,6 +119,7 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp().defaultNow(),
 })
 
+//Table Relations
 export const usersRelations = relations(users, ({ many }) => ({
     notes: many(notes),
     tasks: many(tasks),

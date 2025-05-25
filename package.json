@@ -26,6 +26,7 @@
     "llamaindex": "^0.10.2",
     "lru-cache": "^11.1.0",
     "playwright": "^1.52.0",
+    "tiktoken": "^1.0.21",
     "ws": "^8.18.2",
     "youtube-transcript": "^1.2.1",
     "zod": "^3.24.2"

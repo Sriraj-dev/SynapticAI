@@ -7,18 +7,20 @@ import { NotesController } from '../controllers/notes.controller';
 import { NewTaskRequest, NoteCreateRequest } from '../utils/apiModels/requestModels';
 import { TaskController } from '../controllers/tasks.controller';
 import { LRUCache } from "lru-cache";
-import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer} from 'llamaindex'
-import { websiteEmbeddingModel, websiteResearcher } from './aiModels';
+import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer, similarity} from 'llamaindex'
+import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from '../utils/agentPrompts'
-import { getWebsiteContent } from '../utils/utility_methods';
 import {YoutubeTranscript} from 'youtube-transcript'
-import { WorkerService } from './WorkerService/worker_service';
+import { WorkerServiceApi } from './WorkerService/worker_service_api';
+import { truncateNotesByTokenLimit } from '../utils/utility_methods';
+import { Note } from '../utils/models';
 
 // Cache to store the websites content, to avoid frequent scraping 
 //TODO: Figure out how to store this in redis like storage 
+//This might cause memory bloats on server
 const websiteDataCache = new LRUCache<string, { vectorIndex: VectorStoreIndex; summaryIndex: SummaryIndex }>({
   max: 100, // Max 100 sessions
-  ttl: 3600 * 1000, // 1 hour TTL
+  ttl: 1800 * 1000, // 30 Mins TTL
 });
 
 //Settings for LlamaIndex
@@ -49,7 +51,16 @@ export const getCurrentUserInformation = new DynamicStructuredTool({
       const user = await UserController.getUser(userId)
       
       console.log("User Found: ", user?.name)
-      return JSON.stringify(user);
+      return {
+        name: user?.name,
+        email: user?.email,
+        phone: user?.phone,
+        username: user?.username,
+        subscription_tier: user?.subscription_tier,
+        subscription_end_date: user?.subscription_end_date,
+        subscription_start_date: user?.subscription_start_date,
+        amount_paid_to_synapticAI : user?.amount_paid,
+      };
     }catch(err){
       console.log(err)
       return "Unable to fetch the user Information";
@@ -57,9 +68,9 @@ export const getCurrentUserInformation = new DynamicStructuredTool({
 
   },
   name: 'get_current_user_information',
-  description: 'Returns all the information about the user that is shared with SynapticAI',
+  description: `You can use this tool to fetch details about the user. Returns the user's profile information and subscription details saved in SynapticAI, including name, email, username, subscription status, and total amount paid.`,
   schema: z.object({
-    userMessage: z.string().optional().describe("This is a complete optional message but suggested to use, while this tool is getting executed you can send a short engaging messaging to user")
+    userMessage: z.string().describe("message to keep the user engaged while this tool runs (e.g., 'Please Wait, Fetching your profile...')")
   }),
 })
 
@@ -73,15 +84,11 @@ export const addNote = new DynamicStructuredTool({
         content: content,
       } as NoteCreateRequest
 
-      //TODO: Create a background worker task for this function:
-       (async () => {
-        try {
-          await NotesController.createNote(userId, newNote);
-        } catch (err) {
-          console.error("Note creation failed in background:", err);
-          //TODO: Log it somewhere, to monitor the background tasks
-        }
-      })();
+      setTimeout(() => {
+        NotesController.createNote(userId, newNote).catch((err) => {
+          console.error("❌ Note creation failed in background:", err);
+        });
+      }, 0);
 
       return `Note creation is under process. Have a great learning, Thanks!`
     }catch(err){
@@ -93,12 +100,12 @@ export const addNote = new DynamicStructuredTool({
   description: 'Adds a note to the database',
   schema: z.object({
     content: z.string().describe('The content of the note to be added to the database'),
-    title :z.string().optional().describe('The title(optional) of the note'),
-    userMessage: z.string().optional().describe("This is a complete optional message, while this tool is getting executed you can send a short engaging messaging to user")
+    title :z.string().describe('The title of the note'),
+    userMessage: z.string().describe("Message to keep the user engaged while this tool runs")
   }),
 })
 
-export const addMultipleTasks = new DynamicStructuredTool({
+export const addTasks = new DynamicStructuredTool({
   func: async ({tasks,userMessage}, _runManager, context) => {
     const userId = context?.configurable?.userId
     try{
@@ -110,15 +117,14 @@ export const addMultipleTasks = new DynamicStructuredTool({
         owner_id: userId,
       } as NewTaskRequest));
 
-      // TODO:we can add worked threads to handle these jobs
       Promise.all(
         newTasks.map((task) => TaskController.addTask(task))
       ).catch((err) => {
-        console.error("Background task creation failed:", err);
-        //TODO: Log it somewhere to monitor all the background processes
+        console.error("❌ Background task creation failed:", err);
       });
+      
 
-      return "All the tasks will be added to your dashboard, I know you can do this!";
+      return "All the tasks will be added to your dashboard, Best of Luck!";
 
     }catch(err){
       console.log(err)
@@ -126,7 +132,7 @@ export const addMultipleTasks = new DynamicStructuredTool({
     }
 
   },
-  name: 'add_multiple_tasks',
+  name: 'add_tasks',
   description: 'Adds a list of tasks to the user, which user can view/modify from dashboard',
   schema: z.object({
     tasks : z.array(
@@ -136,52 +142,19 @@ export const addMultipleTasks = new DynamicStructuredTool({
           content:z.string().optional().describe("An optional content section for the task which describes what exactly needs to be done in a tasl")
         })
       ).describe('The list of tasks to be added to the user'),
-    userMessage: z.string().optional().describe("This is a complete optional message, while this tool is getting executed you can send a short engaging messaging to user")
-  }),
-})
-
-export const addSingleTask = new DynamicStructuredTool({
-  func: async ({title, content,userMessage}, _runManager, context) => {
-    const userId = context?.configurable?.userId
-    try{
-      const newTask = {
-        title: title,
-        content: content,
-        owner_id: userId,
-      } as NewTaskRequest
-
-      //TODO: Move this to background worker
-      TaskController.addTask(newTask).then(()=>{
-        console.log("New task created for user - ", userId)
-      }).catch(
-        (err)=>{
-          //TODO: Monitor the background tasks
-          console.log("Error in creating new task for user - ", userId)
-          console.log(err)
-        }
-      )
-
-      return `Task creation is under process. Hope you will finish it soon!`
-    }catch(err){
-      return "Sorry, Unable to add the task into users memory, Try again later!"
-    }
-  },
-  name: 'add_single_task',
-  description: 'Adds a single task to the user, which user can view/modify from dashboard',
-  schema: z.object({
-    title: z.string().describe('The title of task, which describes what to do'),
-    content: z.string().optional().describe('An optional content section for the task which describes what exactly needs to be done in a tasl'),
-    userMessage: z.string().optional().describe("This is a complete optional message, while this tool is getting executed you can send a short engaging messaging to user")
+    userMessage: z.string().describe("Message to keep the user engaged while this tool runs")
   }),
 })
 
 export const getUsersTasks = new DynamicStructuredTool({
   func: async ({userMessage}, _runManager, context) => {
-    const userId = context?.configurable?.userId
     try{
+      const userId = context?.configurable?.userId
       const tasks = await TaskController.getTasks(userId)
 
-      return JSON.stringify(tasks)
+      const parsedTasks = tasks.map((task, index) => (`Task ${index+1}:\nTitle: ${task.title}\nContent: ${task.content}\nStatus: ${task.status}\nTime_Logged: ${task.time_logged}\n`)).join('\n')
+
+      return parsedTasks
     }catch(err){
       return "Sorry, Unable to fetch the tasks, Try again later!"
     }
@@ -189,7 +162,7 @@ export const getUsersTasks = new DynamicStructuredTool({
   name: 'get_users_tasks',
   description: 'Returns all the tasks that user has created',
   schema: z.object({
-    userMessage: z.string().optional().describe("This is a complete optional message but suggested to use, while this tool is getting executed you can send a short engaging messaging to user")
+    userMessage: z.string().describe("Message to keep the user engaged while this tool runs")
   }),
 })
 
@@ -213,7 +186,7 @@ export const WebsiteQueryTool = new DynamicStructuredTool({
       }else{
         console.log(`Could not fetch ${url} from cache`)
         // Use crawlee to get the websites content .
-        const content = await WorkerService.fetchWebsiteContent(url)
+        const content = await WorkerServiceApi.fetchWebsiteContent(url)
         if(content.length == 0){
           return "Sorry, Unable to fetch the content of the website, You can highlight the text on your browser and ask your query, I will be happy to answer"
         }
@@ -247,21 +220,20 @@ export const WebsiteQueryTool = new DynamicStructuredTool({
     }
   },
   name: 'website_query_tool',
-  description: `Use this tool to summarize or answer questions about the website the user is currently viewing. 
-
-  You do NOT need to ask the user for the website URL — the URL is already available which is picked up from the users browser.
-
-Trigger this tool when the user asks anything like:
-- "Can you summarize this website?"
-- "What is this page about?"
-- "Can you explain what's going on here?"
-- "What does this paragraph mean?"
-- Or any general or specific question about the current webpage.
-Do not use this tool for unrelated or non-website queries.`,
+  description: `Use this tool to interact with the content of the website the user is currently viewing.
+It can either generate a full summary of the page or answer specific questions based on the content, 
+depending on the intent and the 'isSummary' flag.`,
   schema: z.object({
-    userQuery: z.string().optional().describe("The user's request about the website, provided via the URL in the configuration. Use this for summarization requests (e.g., 'Summarize this website' or 'What is this website about?') or specific questions about the website’s content (e.g., 'What is the history section on this page?'). If empty, a default summary is generated."),
-    isSummary: z.boolean().optional().default(true).describe('Whether to summarise (short or long) the website or answer any questions. If true, the tool will summarise the website. If false, the tool will answer any questions on the website. Default is true.'),
-    userMessage: z.string().optional().describe("This is an optional message but suggested to use, while this tool is getting executed you can send a short engaging messaging to user")
+    url: z.string().optional().describe("The URL of the website the user is currently browsing. This is optional because tool already has access to the users currently browsing URL"),
+    userQuery: z.string().describe(`The user's natural language request about the website. 
+      Examples:
+      - "Summarize this page"
+      - "What does this section mean?"
+      - "Explain the pricing details"
+      - "Give me 3 key takeaways from this article"`),
+    isSummary: z.boolean().describe(`Set to true if the user's intent is to generate a full summary of the website.
+Set to false if the user is asking a specific question that requires contextual understanding of certain parts of the page.`),
+    userMessage: z.string().optional().describe("Message to keep the user engaged while this tool runs")
   }),
 })
 
@@ -324,22 +296,97 @@ export const VideoQueryTool = new DynamicStructuredTool({
 
   },
   name: 'video_query_tool',
-  description: `Use this tool to answer questions about the video the user is currently viewing.
-
-  You do NOT need to ask the user for the video url — the url is already available which is picked up from the users browser.
-
-Trigger this tool when the user asks anything like:
-- "Can you summarize this video?"
-- "What is this video about?"
-- "Can you explain what's going on here?"
-- "What does this video mean?"
-- Or any general or specific question about the current video.
-Do not use this tool for unrelated or non-video queries.`,
+  description: `Use this tool to interact with the content of the video the user is currently watching.
+It can either generate a full summary of the video or answer specific questions based on the transcript,
+depending on the user's intent and the 'isSummary' flag.`,
   schema: z.object({
-    videoUrl: z.string().optional().describe("Optional parameter, if the user specifically mentions any video url"),
-    userQuery: z.string().optional().describe("The user's request about the video. Use this for summarization requests (e.g., 'Summarize this video' or 'What is this video about?') or specific questions about the video’s content (e.g., 'What is the history section on this video?'). If empty, a default summary is generated."),
-    isSummary: z.boolean().optional().default(true).describe('Whether to summarise (short or long) the video or answer any questions. If true, the tool will summarise the video. If false, the tool will answer any questions on the video. Default is true.'),
-    userMessage: z.string().optional().describe("This is an optional message but suggested to use, while this tool is getting executed you can send a engaging messaging to user")
+    videoUrl: z.string().optional().describe("The URL of the video the user is currently watching/browsing. This is optional because tool already has access to the users currently watching video URL."),
+    userQuery: z.string().describe(`The user's natural language request about the video content. 
+      Examples:
+      - "Summarize this video"
+      - "What is the main idea here?"
+      - "Explain what the speaker said about inflation"
+      - "What are the key points from this lecture?"`),
+    isSummary: z.boolean().describe(`Set to true if the user is asking for a complete summary of the video.
+      Set to false if the user is asking a specific question that refers to a particular part or topic within the video.`),
+    userMessage: z.string().optional().describe("Message to keep the user engaged while this tool runs")
   }),
 })
 
+export const SemanticNoteSearchTool = new DynamicStructuredTool({
+  name : 'semantic_note_search',
+  description: "Searches for the most relevant note chunks from the user's past notes using vector similarity based on the current query. Use this to recall knowledge or assist the user based on previous learnings.",
+  schema: z.object({
+    query: z.string().describe('The natural language query used to find semantically similar notes from their past saved notes using vector similarity search.'),
+    userMessage: z.string().describe("Message to keep the user engaged while this tool runs")
+  }),
+  responseFormat: "content_and_artifact",
+
+  func: async ({query, userMessage}, _runManager, context) => {
+    try{
+      const userId = context?.configurable?.userId
+
+      const semanticNotes = await NotesController.getSemanticNoteChunks(query, userId)
+      console.log("Querying Vector Database : ", query)
+
+      const parsedResponse = semanticNotes
+      .sort((a, b) => b.similarity - a.similarity)
+      .map((note) => (`[\nSimilarity: ${note.similarity.toFixed(2)} %\nNote_Chunk: ${note.content}\nNote ID: ${note.note_id}\n]`));
+
+      const artifacts = semanticNotes.map((note) => note.note_id)
+      console.log(parsedResponse)
+
+      return [parsedResponse.join('\n'), artifacts]
+    }catch(err){
+      return "Sorry, Facing Technical Difficulties while searching for notes. Please try again later."
+    }
+  }
+})
+
+export const GetNotesByDateRangeTool =  new DynamicStructuredTool({
+  func: async ({startDate, endDate, userMessage}, _runManager, context) => {
+
+    try{
+      const userId = context?.configurable?.userId
+      console.log(`Fetching Users tasks from the ${startDate} to ${endDate}`)
+      const notes = await NotesController.getNotesByDateRange(new Date(`${startDate}T00:00:00Z`) , new Date(`${endDate}T23:59:59.999Z`), userId)
+
+      const notesContent = notes
+      .sort((a, b) => {
+        const dateA = a.updatedAt ? a.updatedAt.getTime() : 0;
+        const dateB = b.updatedAt ? b.updatedAt.getTime() : 0;
+        return dateB - dateA;
+      })
+      .map(note => ({
+        title: note.title ?? "N/A",
+        content: note.content,
+        createdAt: note.updatedAt ?? "Unknown"
+      } as Note));   
+      
+      const {result,trimmed} = await truncateNotesByTokenLimit(notesContent, MAX_TOKENS_PER_TOOL)
+      
+      const additionalMessage = trimmed
+      ? "\n\nNote: The notes provided here represent only a subset of the full set within the requested date range due to token limitations. If more context is needed, consider requesting a narrower range"
+      : "";
+
+      return result + additionalMessage
+
+    }catch(err){
+      return "Sorry, Unable to fetch your notes, Try again later!"
+    }
+  },
+
+  name: 'get_notes_by_date_range',
+  description: `Fetches all notes created by the user between the given start and end dates (inclusive). Use this to access past learning, recall memory, or retrieve context.
+  NOTE: You have a tool to get current date (getCurrentDate), You can use it accordingly to get the start and end date of the range.
+  `,
+
+  schema: z.object({
+    startDate: z.string().describe("The start date of the range in YYYY-MM-DD format"),
+    endDate: z.string().describe("The end date of the range in YYYY-MM-DD format"),
+    userMessage: z.string().describe("Message to keep the user engaged while this tool runs")
+  }),
+
+})
+
+//TODO: If required, add a tool to fetch note by noteId.
