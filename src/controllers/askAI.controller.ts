@@ -6,6 +6,8 @@ import { AgentEvent } from "../utils/apiModels/responseModels";
 import { RedisStorage } from "../services/redis/storage";
 import { preprocessAgentContext } from "../utils/utility_methods";
 
+
+//TODO: Will be more fun and meaningful, if implemented using OOPS concepts, instead of a function like below.
 export const AgentController = {
     async *invokeAgent(userId : string, sessionId:string, request : AgentRequest):AsyncGenerator<AgentEvent>{
 

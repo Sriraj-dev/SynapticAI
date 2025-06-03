@@ -1,64 +1,7 @@
 import { MessagesAnnotation } from "@langchain/langgraph";
-import { CheerioCrawler, PlaywrightCrawler, RequestQueue } from "crawlee";
 import {encoding_for_model, TiktokenModel} from "tiktoken";
 import { rootModel } from "../services/aiModels";
 import { Note } from "./models";
-
-//TODO: This needs chromium browser to be installed on the server.
-export async function getWebsiteContent(url: string) {
-    let content = '';
-    const requestQueue = await RequestQueue.open();
-  
-    await requestQueue.addRequest({ url: url });
-    
-    const playwrightCrawler = new PlaywrightCrawler({
-      requestQueue,
-      launchContext: {
-        launchOptions: {
-          headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        },
-      },
-      async requestHandler({ page }) {
-        console.log("Scraping : ", page.url())
-        await page.waitForLoadState('networkidle'); // Wait for dynamic content
-        content = await page.evaluate(() => {
-          document.querySelectorAll("script, style, nav, header, footer, iframe, noscript").forEach(el => el.remove());
-          return document.body.innerText.replace(/\s+/g, " ").trim();
-        });
-      },
-      requestHandlerTimeoutSecs: 15,
-    });
-  
-    try {
-      await playwrightCrawler.run();
-      return content;
-    } catch (error) {
-      console.warn('Playwright failed, falling back to Cheerio (SSR):', error);
-    }
-  
-    if(requestQueue.getTotalCount() == 0){
-      requestQueue.addRequest({ url: url });
-    }
-  
-    const cheerioCrawler = new CheerioCrawler({
-      requestQueue,
-      async requestHandler({ $ }) {
-        $('script, style, nav, header, footer, iframe, noscript').remove();
-        const rawText = $('body').text();
-        content = rawText.replace(/\s+/g, " ").trim();
-      },
-    });
-    
-    try{
-      await cheerioCrawler.run();
-      return content;
-    }catch(err){
-      console.error(err)
-      return ''
-    }
-}
-  
 
 export async function preprocessAgentContext({ messages } : typeof MessagesAnnotation.State){
 
@@ -80,7 +23,7 @@ export async function preprocessAgentContext({ messages } : typeof MessagesAnnot
   return recentMessages
 }
 
-
+//TODO: Token estimation works only for openai and few other models, Re-implement this function to work with all models.
 export async function truncateNotesByTokenLimit(notes : Note[], MAX_TOKEN_LIMIT : number) : Promise<{result : string, trimmed : boolean}>{
   let tokenCount = 0
   let selected_objects = []
@@ -106,6 +49,12 @@ export async function truncateNotesByTokenLimit(notes : Note[], MAX_TOKEN_LIMIT 
   }
 }
 
+
+export function logMemory(label: string) {
+  const mem = process.memoryUsage()
+  const mb = (bytes: number) => (bytes / 1024 / 1024).toFixed(2) + 'MB'
+  console.log(`[${label}] Memory - RSS: ${mb(mem.rss)}, HeapUsed: ${mb(mem.heapUsed)}, HeapTotal: ${mb(mem.heapTotal)}`)
+}
 
 async function estimateTokens(text: string, model : TiktokenModel): Promise<number> {
   try {

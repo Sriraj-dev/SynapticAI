@@ -11,9 +11,10 @@ import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesiz
 import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from '../utils/agentPrompts'
 import {YoutubeTranscript} from 'youtube-transcript'
-import { WorkerServiceApi } from './WorkerService/worker_service_api';
-import { truncateNotesByTokenLimit } from '../utils/utility_methods';
+import { logMemory, truncateNotesByTokenLimit } from '../utils/utility_methods';
+import * as cheerio from "cheerio";
 import { Note } from '../utils/models';
+import puppeteer, { Browser } from 'puppeteer';
 
 // Cache to store the websites content, to avoid frequent scraping 
 //TODO: Figure out how to store this in redis like storage 
@@ -186,7 +187,10 @@ export const WebsiteQueryTool = new DynamicStructuredTool({
       }else{
         console.log(`Could not fetch ${url} from cache`)
         // Use crawlee to get the websites content .
-        const content = await WorkerServiceApi.fetchWebsiteContent(url)
+
+        //TODO: In Future, May be we can use worker service to fetch the website content if that optimises the performance
+        // const content = await WorkerServiceApi.fetchWebsiteContent(url)
+        const content = await getWebsiteContent(url)
         if(content.length == 0){
           return "Sorry, Unable to fetch the content of the website, You can highlight the text on your browser and ask your query, I will be happy to answer"
         }
@@ -390,3 +394,60 @@ export const GetNotesByDateRangeTool =  new DynamicStructuredTool({
 })
 
 //TODO: If required, add a tool to fetch note by noteId.
+
+
+//#region Private Methods
+let browser: Browser | null = null;
+
+async function getOrCreateBrowser(): Promise<Browser> {
+  if (browser) return browser;
+  logMemory("Before Puppeteer Launch");
+  browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+
+  process.on('exit', async () => {
+    if (browser) await browser.close();
+  });
+
+  logMemory("After Puppeteer Launch");
+  return browser;
+}
+
+export async function getWebsiteContent(url: string) {
+    let content = '';
+
+    try {
+      const browser = await getOrCreateBrowser();
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: 'networkidle0', timeout: 8000 });
+  
+      content = await page.evaluate(() => {
+        document.querySelectorAll("script, style, nav, header, footer, iframe, noscript").forEach(el => el.remove());
+        return document.body.innerText.replace(/\s+/g, ' ').trim();
+      });
+  
+      await page.close();
+      console.log("Puppeteer (SSR) content fetched successfully");
+      return content;
+    } catch (err) {
+      console.warn('Puppeteer failed, falling back to Cheerio:', err);
+    }
+
+    try {
+      const res = await fetch(url);
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      $('script, style, nav, header, footer, iframe, noscript').remove();
+      content = $('body').text().replace(/\s+/g, ' ').trim();
+      console.log("Cheerio (CSR) content fetched successfully");
+
+      return content;
+    } catch (err) {
+      console.error('Cheerio also failed:', err);
+      return '';
+    }
+}
+
+//#endregion

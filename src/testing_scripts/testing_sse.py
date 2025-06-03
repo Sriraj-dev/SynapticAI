@@ -88,7 +88,7 @@ if __name__ == "__main__":
        user_message = "Can you please give me a gist of this website?"
     REQUEST_BODY = {
         "userMessage": user_message,
-        "url": "https://www.assemblyai.com/dashboard/account/pricing",
+        "url": "https://github.com/thomasdondorf/puppeteer-cluster",
         "context": """Add credits to your account to unlock full API access, more capabilities, and dedicated support. With pay as you go, you'll get everything included in our free offering, plus:
 
         Streaming Speech-to-Text: Transcribe live audio streams with high accuracy and low latency

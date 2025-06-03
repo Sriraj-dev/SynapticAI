@@ -10,6 +10,7 @@ import { StatusCodes } from './utils/statusCodes'
 import taskRouter from './routes/task'
 import askAIRouter from './routes/askAI'
 import {wsRouter, websocket} from './routes/audioWrapper'
+import { logMemory } from './utils/utility_methods'
 
 const app = new Hono()
 
@@ -38,6 +39,7 @@ app.onError((err, c) => {
 	return c.json({ message: 'Internal Server Error' , detail: `Name: ${err.name},Message : ${err.message}, Stack: ${err.stack}, Cause: ${err.cause}`}, 500)
 })
 
+logMemory("StartUp")
 app.get('/', (c) => c.text('Welcome to SynapticAI'))
 
 
