@@ -12,4 +12,8 @@ redis.on('error', (err) => {
   console.error('❌ Redis error:', err);
 });
 
+export function disconnect_redis() {
+  redis.disconnect();
+}
+
 export default redis;

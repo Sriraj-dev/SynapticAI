@@ -5,6 +5,13 @@ import { ElevenLabsClient, play } from 'elevenlabs'
 import { AppError } from '../../utils/errors';
 import { StatusCodes } from '../../utils/statusCodes';
 
+/*
+TODO: Consider migrating to some other services to reduce costs
+There are some free TTS Services : 
+OrpheusTTS, IndexTTS, F5-TTS
+
+*/
+
 export class TTS_Provider {
     private llSocket : WebSocket | null = null;
     private elevenlabsClient : ElevenLabsClient | null = null

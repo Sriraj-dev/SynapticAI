@@ -47,6 +47,7 @@ def test_sse_endpoint(url, token, body):
         log_with_timestamp("Connected to SSE stream. Receiving events...\n", 'green')
 
         for event in client.events():
+            flagged = False 
             # Skip empty events
             if not event.event and not event.data:
                 continue
@@ -58,10 +59,15 @@ def test_sse_endpoint(url, token, body):
                 data = event.data  # Fallback to raw data if not JSON
 
             # Log event details in a cleaner way
-            log_with_timestamp(f"Event: {event.event or 'message'}", 'cyan')
-            log_with_timestamp(f"Data: {pretty_print_json(data)}", 'yellow')
-            log_with_timestamp(f"ID: {event.id or 'N/A'}", 'magenta')
-            print("-" * 50)
+            if(event.event != "stream"):
+                log_with_timestamp(f"Event: {event.event or 'message'}", 'cyan')
+                log_with_timestamp(f"Data: {pretty_print_json(data)}", 'yellow')
+                log_with_timestamp(f"ID: {event.id or 'N/A'}", 'magenta')
+                print("-" * 50)
+            else:
+                if not flagged:
+                    flagged = True
+                    log_with_timestamp(f"Update: Response Stream Started, User will start getting response from this point of time", 'green')
 
             # Stop on complete or error events
             if event.event in ["complete", "error"]:
@@ -82,8 +88,14 @@ if __name__ == "__main__":
        user_message = "Can you please give me a gist of this website?"
     REQUEST_BODY = {
         "userMessage": user_message,
-        "url": "https://editorjs.io/",
-        # "context": {"key": "value"}
+        "url": "https://github.com/thomasdondorf/puppeteer-cluster",
+        "context": """Add credits to your account to unlock full API access, more capabilities, and dedicated support. With pay as you go, you'll get everything included in our free offering, plus:
+
+        Streaming Speech-to-Text: Transcribe live audio streams with high accuracy and low latency
+        LeMUR: Apply LLMs directly to voice data to get deeper insights from transcripts
+        Unlimited transcriptions per month: Transcribe as many files as you need, with no restrictions
+        Concurrency of up to 200 files: Process more files, faster. Contact us post-upgrade for even higher concurrency limits
+        Transfer remaining credits: Any unused free credits will automatically transfer over to your balance"""
     }
     # Run the test
     log_with_timestamp(f"Sending POST request to {ENDPOINT_URL}", 'blue')

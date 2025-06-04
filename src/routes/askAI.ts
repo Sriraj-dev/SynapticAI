@@ -37,7 +37,9 @@ askAIRouter.post("/",async (c : Context)=>{
             );
 
             for await (const chunk of agentStream){
-                console.log("Writing event to stream")
+                if(chunk.type == "complete"){
+                    console.log("Sending Final Event and Closing Stream")
+                }
                 await stream.writeSSE({
                     event: chunk.type,
                     data: JSON.stringify(chunk.data),

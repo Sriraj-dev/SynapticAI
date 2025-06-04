@@ -1,5 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { OpenAI, OpenAIEmbedding } from "llamaindex";
+import { OpenAI, OpenAIEmbedding } from "llamaindex";  
 
 //TODO: Give a choice of models to users to choose from
 //Can replace with Deepseek model to save costs
@@ -28,3 +28,12 @@ export const websiteEmbeddingModel = new OpenAIEmbedding({
   model:'text-embedding-3-small',
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+export const notesEmbeddingModel = new OpenAIEmbedding({
+  model:'text-embedding-3-small',
+  apiKey: process.env.OPENAI_API_KEY
+  //TODO: can move to 768 dimensions, if cannot bear the cost.
+})
+
+export const MAX_TOKENS_PER_TOOL = 2000;
+export const SEMANTIC_SEARCH_SIMILARITY_THRESHOLD = 50;
