@@ -1,0 +1,1 @@
+ALTER TABLE "user_usage_metrics" ALTER COLUMN "daily_chat_tokens_limit" SET DEFAULT 5000;

@@ -35,7 +35,7 @@ export const CallbackController = {
                 email,
                 phone,
             } as NewUser);
-    
+
             return c.json({
                 message : `${newUser.name} (${newUser.uid}) successfully inserted into database.`
             }, 200)

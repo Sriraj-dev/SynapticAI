@@ -40,6 +40,18 @@ export enum NoteStatusLevel{
     FailedToCreate = 'Failed To Create',
 }
 
+export enum NoteStatusReason {
+    Error = "Something went wrong while memorizing your note. We're on it — please try again shortly.",
+    
+    UserCancelled = "You cancelled the request. No worries — you can always try again later!",
+    
+    TokenLimitReached = "Whoa! You’ve maxed out your AI memory space. Upgrade your plan to keep the momentum going!",
+    
+    MemoryLimitReached = "You’ve reached your memory limit for this plan. Upgrade to store more insights and ideas.",
+    
+    Other = "We ran into an issue while saving your note. Please try again in a bit.",
+}
+
 // Users Table
 export const users = pgTable("users", {
   uid : text().primaryKey(),
@@ -64,6 +76,7 @@ export const notes = pgTable("notes", {
   title: text(),
   content: text().notNull(), //HTML, JSON or Plain Text
   status: text().notNull().default(NoteStatusLevel.Creating),
+  reason: text(), //Reason for the status change, if any.
   createdAt: timestamp().defaultNow(),
   updatedAt: timestamp().defaultNow(),
 })
@@ -73,26 +86,32 @@ export const notes = pgTable("notes", {
 Look at ./vectordb_schema.ts
 */
 
+//TODO: Update token limits in userUsageMetrics based on subscription tier
 export const userUsageMetrics = pgTable("user_usage_metrics", {
     userId: text().primaryKey().references(() => users.uid, {onDelete: "cascade"}).notNull(),
+    subscription_tier: text().notNull().default(SubscriptionTier.Basic), //TODO: We can remove this column if not required.
 
-    total_semantic_tokens: integer().default(0).notNull(),
-    today_semantic_tokens: integer().default(0).notNull(),
+    total_embedded_tokens: integer().default(0).notNull(),
+    embedded_tokens_limit: integer().default(10000).notNull(),
 
     total_chat_tokens: integer().default(0).notNull(),
     today_chat_tokens: integer().default(0).notNull(),
+    daily_chat_tokens_limit: integer().default(5000).notNull(), // TODO: Decide the token limit for chat
 
     total_voice_tokens: integer().default(0).notNull(),
     today_voice_tokens: integer().default(0).notNull(),
+    daily_voice_tokens_limit: integer().default(700).notNull(), // TODO: Decide the token limit for voice
 
     total_internet_calls: integer().default(0).notNull(),
     today_internet_calls: integer().default(0).notNull(),
+    daily_internet_calls_limit: integer().default(10).notNull(), // TODO: Decide the limit for internet calls
 
     total_semantic_queries: integer().default(0).notNull(),
     today_semantic_queries: integer().default(0).notNull(),
+    daily_semantic_queries_limit: integer().default(10).notNull(), //TODO: (if requried) Decide the limit for semantic queries
 
-    lastResetAt: timestamp().defaultNow(),
-    updatedAt: timestamp().defaultNow(),
+    lastResetAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp().defaultNow().notNull(),
 })
 
 //noteAccess Table
