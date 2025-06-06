@@ -10,9 +10,11 @@ import { StatusCodes } from './utils/statusCodes'
 import taskRouter from './routes/task'
 import askAIRouter from './routes/askAI'
 import {wsRouter, websocket} from './routes/audioWrapper'
-import { logMemory } from './utils/utility_methods'
+import { logMemory, patchConsoleLogWithTime } from './utils/utility_methods'
 
 const app = new Hono()
+
+patchConsoleLogWithTime()
 
 app.use('*', logger())
 app.use('*', prettyJSON())

@@ -1,10 +1,10 @@
 
 
 /*
-Note: We are note generating migrations for this file using drizzle-orm,
+Note: We are not generating migrations for this file using drizzle-orm,
 because these changes have already beenapplied on the database as raw sql. (which will be included in the repo somewhere) 
 
-As this table contains a lot of partitioning and create ann indexes, drizzle doesn't support it.
+As this table contains a lot of partitioning and creating ann indexes, drizzle doesn't support it.
 */
 
 /*

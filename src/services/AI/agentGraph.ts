@@ -1,16 +1,16 @@
 /*
 This agent graph is stateless and pre compiled which can be invoked using agentState as required.
 */
-import "../config/env"
-import { getCurrentDate, getCurrentUserInformation, addNote, addTasks, getUsersTasks, WebsiteQueryTool, VideoQueryTool, SemanticNoteSearchTool, GetNotesByDateRangeTool} from './agentTools'
+import "../../config/env"
+import { getCurrentDate, getCurrentUserInformation, addNote, addTasks, getUsersTasks, WebsiteQueryTool, VideoQueryTool, SemanticNoteSearchTool, GetNotesByDateRangeTool, InternetSearchTool} from './agentTools'
 import {ToolNode} from '@langchain/langgraph/prebuilt'
 import { rootModel } from './aiModels';
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import {  AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { AgentSystemPrompt } from '../utils/agentPrompts';
+import { AgentSystemPrompt } from './agentPrompts';
 
 //Create Tools
-const tools = [SemanticNoteSearchTool, GetNotesByDateRangeTool, WebsiteQueryTool, VideoQueryTool, getCurrentUserInformation, addNote, addTasks, getUsersTasks, getCurrentDate]
+const tools = [InternetSearchTool,SemanticNoteSearchTool, GetNotesByDateRangeTool, WebsiteQueryTool, VideoQueryTool, getCurrentUserInformation, addNote, addTasks, getUsersTasks, getCurrentDate]
 
 //Create Model
 const agentModel = rootModel.bindTools(tools)

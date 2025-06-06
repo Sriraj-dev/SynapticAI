@@ -1,7 +1,20 @@
 import { MessagesAnnotation } from "@langchain/langgraph";
 import {encoding_for_model, TiktokenModel} from "tiktoken";
-import { rootModel } from "../services/aiModels";
+import { encode } from "gpt-tokenizer";
+import { rootModel } from "../services/AI/aiModels";
 import { Note } from "./models";
+
+export function patchConsoleLogWithTime() {
+  const originalLog = console.log;
+
+  console.log = (...args: any[]) => {
+    const now = new Date();
+    const formatted =
+      now.toLocaleDateString('en-GB') + ' ' +
+      now.toLocaleTimeString('en-GB', { hour12: false });
+    originalLog(`[${formatted}]`, ...args);
+  };
+}
 
 export async function preprocessAgentContext({ messages } : typeof MessagesAnnotation.State){
 
@@ -31,7 +44,7 @@ export async function truncateNotesByTokenLimit(notes : Note[], MAX_TOKEN_LIMIT 
 
   for(const note of notes){
     const objString = `Title: ${note.title}\nContent: ${note.content}\nUpdatedAt:${note.createdAt?.toDateString()}`
-    const estimatedTokens = await estimateTokens(objString, rootModel.model as TiktokenModel)
+    const estimatedTokens = estimateTokens(objString, rootModel.model as TiktokenModel)
 
     if(tokenCount + estimatedTokens > MAX_TOKEN_LIMIT){
       trimmed = true
@@ -56,13 +69,9 @@ export function logMemory(label: string) {
   console.log(`[${label}] Memory - RSS: ${mb(mem.rss)}, HeapUsed: ${mb(mem.heapUsed)}, HeapTotal: ${mb(mem.heapTotal)}`)
 }
 
-async function estimateTokens(text: string, model : TiktokenModel): Promise<number> {
+export function estimateTokens(text: string, model? : TiktokenModel): number {
   try {
-    const encoding = encoding_for_model(model);
-    const encoded = encoding.encode(text);
-    encoding.free();
-
-    return encoded.length;
+    return encode(text).length;
   } catch (error) {
     console.error("Error estimating tokens:", error);
     throw error;

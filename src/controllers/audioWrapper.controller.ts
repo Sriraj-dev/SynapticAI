@@ -2,7 +2,7 @@ import { WSContext } from "hono/ws";
 import { AudioModelResponse, AudioModelResponseType } from "../utils/audioWrapperModels/responseModels";
 import { STT_Provider } from "../services/STT_Provider/STTProvider";
 import { OnBoardingAgent } from "../services/AI/onBoardingAgent";
-import { OnBoardingAgentSystemPrompt } from "../utils/agentPrompts";
+import { OnBoardingAgentSystemPrompt } from "../services/AI/agentPrompts";
 import { TTS_Provider } from "../services/TTS_Provider/TTSProvider";
 import { AppError } from "../utils/errors";
 import { StatusCodes } from "../utils/statusCodes";
@@ -158,7 +158,7 @@ export const greetingAgentHandler : any = () => {
 }
 
 
-
+//TODO: Update the token usage using background worker after completing this handler.
 export const SynapticAgentHandler : any = () => {
     
 }

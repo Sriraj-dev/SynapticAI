@@ -7,7 +7,7 @@ import { NoteUpdateRequest, NoteCreateRequest } from "../utils/apiModels/request
 import { NotFoundError } from "../utils/errors";
 import redis from "../services/redis/redis";
 import { CreateSemanticsJob, JobQueue } from "../services/redis/queue_utils";
-import { notesEmbeddingModel, SEMANTIC_SEARCH_SIMILARITY_THRESHOLD } from "../services/aiModels";
+import { notesEmbeddingModel, SEMANTIC_SEARCH_SIMILARITY_THRESHOLD } from "../services/AI/aiModels";
 
 
 export const NotesController = {
@@ -95,7 +95,7 @@ export const NotesController = {
             return c.json({ message: 'Access Denied' }, StatusCodes.ACCESS_DENIED);
         }
 
-        //Will delete the notes semantics as well via cascade delete
+        //This Will delete the notes semantics as well via cascade delete
         const note : Note = await NotesRepository.deleteNote(noteId)
 
         return c.json({ message: `Succesfull`, data : note}, StatusCodes.OK);

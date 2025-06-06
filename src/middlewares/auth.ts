@@ -1,7 +1,7 @@
 
 
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
-import { Hono, MiddlewareHandler } from "hono"; 
+import { MiddlewareHandler } from "hono"; 
 import { StatusCodes } from "../utils/statusCodes";
 
 export const authMiddleware : MiddlewareHandler = clerkMiddleware()

@@ -1,5 +1,5 @@
 import { AIMessage, BaseMessage, HumanMessage, SystemMessage } from "@langchain/core/messages"
-import { onBoardingAssistant } from "../aiModels"
+import { onBoardingAssistant } from "./aiModels"
 import { AppError } from "../../utils/errors";
 import { StatusCodes } from "../../utils/statusCodes";
 

@@ -1,10 +1,11 @@
 
 import { BaseMessage, HumanMessage, isAIMessage, isAIMessageChunk, isToolMessage } from "@langchain/core/messages";
-import {agent} from "../services/agentGraph"
+import {agent} from "../services/AI/agentGraph"
 import { AgentRequest } from "../utils/apiModels/requestModels";
 import { AgentEvent } from "../utils/apiModels/responseModels";
 import { RedisStorage } from "../services/redis/storage";
-import { preprocessAgentContext } from "../utils/utility_methods";
+import { estimateTokens, preprocessAgentContext } from "../utils/utility_methods";
+import { encode } from "gpt-tokenizer";
 
 
 //TODO: Will be more fun and meaningful, if implemented using OOPS concepts, instead of a function like below.
@@ -18,6 +19,7 @@ export const AgentController = {
         const initialState = {messages:[...chatHistory ,new HumanMessage(request.userMessage)]}
 
         //Invoke the graph with the chat history and the new Human message.
+        console.log("Invoking agent")
         const agentStream = await agent.stream(initialState,
             {
                 streamMode: ["updates", "messages"],
@@ -50,8 +52,8 @@ export const AgentController = {
 
                     if(isToolMessage(message)){
                         console.log(`Tool Called - ${message.name}, artifacts : ${message.artifact}`)
-                        console.log(message)
 
+                        //TODO: refactor code here:
                         if(message.name === "semantic_note_search" && message.artifact && message.artifact.length){
                             const notes = message.artifact
                             console.log("semantic_tool response received")
@@ -59,13 +61,26 @@ export const AgentController = {
                                 console.log("Note Link: ", note)
                                 yield {
                                     type: "notes-link",
-                                    data: {event:"notes-link", content: note}
+                                    data: {event:"notes-link", content: note},
+                                }
+                            }
+                        }
+
+                        if(message.name === "internet_search" && message.artifact && message.artifact.length){
+                            const webLinks = message.artifact
+                            console.log("internet_search response received")
+                            for(const link of webLinks){
+                                console.log("Web Link: ", link)
+                                yield {
+                                    type: "web-link",
+                                    data: {event:"web-link", content: link},
                                 }
                             }
                         }
 
                         yield {
                             type: "tool",
+                            tokens_used: encode(message.content.toString()).length,
                             data: { event:"tool", content: message.content , tools_used: message.name},
                         };
 
@@ -76,12 +91,14 @@ export const AgentController = {
                             //This is the final response of the request --already streamed to the client.
                             yield {
                                 type: "complete",
-                                data: {event : "complete", content: content}
+                                data: {event : "complete", content: content},
+                                tokens_used: estimateTokens(content.toString())
                             }
                         }else{
                             const combinedMessage = tool_calls.map(tool => tool.args?.userMessage || "").join(" ")
                             yield {
                                 type: "message",
+                                tokens_used: encode(combinedMessage.toString()).length,
                                 data: {event:"message", content: combinedMessage, tools_used: tool_calls.map(tool => tool.name).join(", ")},
                             }
                         }

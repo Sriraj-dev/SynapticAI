@@ -2,19 +2,20 @@
 // src/tools/getCurrentDate.ts
 import { DynamicStructuredTool } from 'langchain/tools'
 import { z } from 'zod'
-import { UserController } from '../controllers/user.controller';
-import { NotesController } from '../controllers/notes.controller';
-import { NewTaskRequest, NoteCreateRequest } from '../utils/apiModels/requestModels';
-import { TaskController } from '../controllers/tasks.controller';
+import { UserController } from '../../controllers/user.controller';
+import { NotesController } from '../../controllers/notes.controller';
+import { NewTaskRequest, NoteCreateRequest } from '../../utils/apiModels/requestModels';
+import { TaskController } from '../../controllers/tasks.controller';
 import { LRUCache } from "lru-cache";
 import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer, similarity} from 'llamaindex'
 import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
-import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from '../utils/agentPrompts'
+import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from './agentPrompts'
 import {YoutubeTranscript} from 'youtube-transcript'
-import { logMemory, truncateNotesByTokenLimit } from '../utils/utility_methods';
+import { logMemory, truncateNotesByTokenLimit } from '../../utils/utility_methods';
 import * as cheerio from "cheerio";
-import { Note } from '../utils/models';
+import { Note } from '../../utils/models';
 import puppeteer, { Browser } from 'puppeteer';
+import {TavilySearch} from "@langchain/tavily"
 
 // Cache to store the websites content, to avoid frequent scraping 
 //TODO: Figure out how to store this in redis like storage 
@@ -43,6 +44,47 @@ export const getCurrentDate = new DynamicStructuredTool({
   description: 'Returns current ISO date',
   schema: z.object({}),
   func: async () => new Date().toISOString(),
+})
+
+
+export const InternetSearchTool =new DynamicStructuredTool({
+  name: 'internet_search',
+  description: 'Use this tool to search the internet for up-to-date information when the user asks something that requires real-time or external knowledge. It fetches relevant search results using the Tavily Search API.',
+  schema: z.object({
+    searchQuery: z.string().describe(
+      'The user question or search phrase to look up on the internet. Should reflect what the user is trying to find or understand.'
+    ),
+    userMessage: z.string().describe(
+      'A short, friendly message shown to the user while waiting for internet search results. Since it may take a few seconds, aim to keep the user engaged, reassured, or even slightly entertained to encourage patience & mention that this search is going to take a little while'
+    )
+  }),
+  responseFormat: "content_and_artifact",
+
+  func: async ({searchQuery, userMessage}, _runManager, context) => {
+    try{
+
+      const tavilytTool = new TavilySearch({
+        maxResults: 3,
+        includeAnswer:true,
+        searchDepth: "advanced"
+      })
+
+      const searchResults = await tavilytTool.invoke({ query: searchQuery });
+
+      const content = searchResults.results.map((result : any) => result.content).join('\n\n');
+      const answer = searchResults.answer
+      const links = searchResults.results.map((result : any) => result.url);
+      console.log("Answer Retreived : " , searchResults)
+      console.log("Links Retreived : " , links)
+
+      const finalResponse = `Short Answer: ${answer} \nSome Relavant Content: ${content}`
+
+      return [finalResponse, links]
+    }catch(err){
+      console.error("Error in Internet Search Tool:", err);
+      return "Sorry, I encountered an error while trying to search the internet. Please try again later.";
+    }
+  }
 })
 
 export const getCurrentUserInformation = new DynamicStructuredTool({
@@ -392,6 +434,7 @@ export const GetNotesByDateRangeTool =  new DynamicStructuredTool({
   }),
 
 })
+
 
 //TODO: If required, add a tool to fetch note by noteId.
 
