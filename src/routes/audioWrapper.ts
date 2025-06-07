@@ -1,7 +1,7 @@
-import {  Hono } from "hono";
+import {  Context, Hono } from "hono";
 import { createBunWebSocket } from "hono/bun";
-import { addSessionDetails, authMiddleware } from "../middlewares/auth";
-import { greetingAgentHandler } from "../controllers/audioWrapper.controller";
+import { addSessionDetails, authMiddleware, wsAuthMiddleware } from "../middlewares/auth";
+import { greetingAgentHandler, SynapticAgentHandler } from "../controllers/audioWrapper.controller";
 import { checkAudioTokenLimit } from "../middlewares/checkUsageMetrics";
 
 export const wsRouter = new Hono()
@@ -22,27 +22,7 @@ If Paid User, Then we can go unlimited.
 
 wsRouter.get('/greeting-agent', upgradeWebSocket(greetingAgentHandler))
 
-wsRouter.get('/askAI', authMiddleware, addSessionDetails, checkAudioTokenLimit , upgradeWebSocket(() => ({
-    onMessage(evt, ws) {
-        console.log('Message from client:', evt.data);
-        ws.send('Hello from server!');
-    },
-    onOpen(_, ws) {
-        console.log('WebSocket connection opened');
-    },
-    onClose(evt, ws) {
-        console.log('WebSocket connection closed');
-    },
-    onError(error, ws) {
-        console.error('WebSocket error:', error);
-    },
-
-    idleTimeout: 60,
-    closeOnBackpressureLimit: true
-})
-))
-
-
+wsRouter.get('/askAI', wsAuthMiddleware,checkAudioTokenLimit, upgradeWebSocket(SynapticAgentHandler))
 
 
 

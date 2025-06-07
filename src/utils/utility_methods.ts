@@ -1,5 +1,5 @@
 import { MessagesAnnotation } from "@langchain/langgraph";
-import {encoding_for_model, TiktokenModel} from "tiktoken";
+import { TiktokenModel} from "tiktoken";
 import { encode } from "gpt-tokenizer";
 import { rootModel } from "../services/AI/aiModels";
 import { Note } from "./models";

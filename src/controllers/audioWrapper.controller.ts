@@ -7,6 +7,8 @@ import { TTS_Provider } from "../services/TTS_Provider/TTSProvider";
 import { AppError } from "../utils/errors";
 import { StatusCodes } from "../utils/statusCodes";
 import { SynapticAIVoices } from "../utils/audioWrapperModels/constants";
+import { AgentController } from "./askAI.controller";
+import { Context } from "hono";
 
 const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY!;
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY!;
@@ -69,6 +71,9 @@ export const greetingAgentHandler : any = () => {
     let userMessage : string = ""
     let currentAgentStatus : "LISTENING" | "PROCESSING" | "RESPONDING" | "ERROR" = "LISTENING"
 
+    /*
+    processUserRequest and build UserMessage are the only functions we need to modify in case of adding any new handler, rest of the code to handle the stt or tts events will mostly remain the same.
+    */
     const processUserRequest = async(ws:WSContext) => {
         const avoiding_echo = userMessage
         if(userMessage && userMessage.length > 0){
@@ -152,14 +157,120 @@ export const greetingAgentHandler : any = () => {
             console.error('WebSocket error:', error);
         },
     
-        idleTimeout: 60,
+        idleTimeout: 30,
         closeOnBackpressureLimit: true
     }
 }
 
 
-//TODO: Update the token usage using background worker after completing this handler.
-export const SynapticAgentHandler : any = () => {
-    
+/*
+TODO: 
+1. We need to change the return type of AgentController.invokeAgent() in order to finish this handler. As it is becoming very messy, In AgentEvent data needs to be of type string not object & then it would be straight forward to complete this handler.
+
+2. Update the token usage using background worker after completing this handler.
+
+For now, leaving the above changes in BACKLOG, lets do it when this becomes a important.
+*/
+export const SynapticAgentHandler : any = (ctx : Context, _ : WebSocket) => {
+    let sttProvider : STT_Provider | null = null;
+    let ttsProvider : TTS_Provider | null = null;
+    let userMessage : string = "";
+    let currentAgentStatus : "LISTENING" | "PROCESSING" | "RESPONDING" | "ERROR" = "LISTENING";
+
+    const processUserRequest = async(ws:WSContext) => {
+        const avoiding_echo = userMessage;
+        if(userMessage && userMessage.length > 0){
+            userMessage = ""
+            currentAgentStatus = "PROCESSING"
+
+            console.log(`Invoking Synaptic Agent with prompt: ${avoiding_echo}`)
+            const agentStream = AgentController.invokeAgent(ctx.get("userId"), ctx.get("sessionId"), {
+                userMessage: avoiding_echo,
+                url: ctx.get("activeurl"),
+                context: ctx.get("context")
+            })
+
+            for await (const chunk of agentStream){
+                let message = {} as AudioModelResponse;
+                
+                switch(chunk.type){
+                    case "message":
+                        //TODO: Send the Engaging message to the client
+                        message.type = AudioModelResponseType.ENGAGING_MESSAGE;
+                        message.data = chunk
+                        ws.send(JSON.stringify(message));
+                        //TODO: Convert the message into audio as well.
+                        
+                        break
+                    case "web-link":
+                    case "notes-link":
+                    case "tool":
+                        //TODO: Pass it on as Metadata to the client
+                    case "stream":
+                        //TODO : Send the stream into tts pipeline
+                    case "complete":
+                        //TODO: Flush the TTS Pipeline
+                }
+            }
+        }else{
+            let message : AudioModelResponse = {
+                type: AudioModelResponseType.COMPLETE_TEXT_RESPONSE,
+                data: ""
+            }
+            ws.send(JSON.stringify(message))
+        }
+    }
+    const buildUserMessage = (message : string) => {
+        userMessage = `${userMessage} ${message}`
+    }
+
+    return {
+        async onMessage(evt: MessageEvent, ws : WSContext) {
+            if(sttProvider && sttProvider.isConnected()){
+                if(currentAgentStatus === "LISTENING")
+                    sttProvider.sendAudio(evt.data);
+
+            }else{
+                ws.send(JSON.stringify({
+                    type: AudioModelResponseType.ERROR,
+                    data: "Deepgram socket not yet connected!"
+                } as AudioModelResponse));
+            }
+        },
+
+        onOpen(_ : Event, ws: WSContext) {
+            console.log('WebSocket connection opened');
+
+            sttProvider = new STT_Provider(DEEPGRAM_API_KEY);
+            ttsProvider = new TTS_Provider(ELEVENLABS_API_KEY, SynapticAIVoices["Eryn (Female)"], true)
+
+            ws.send(JSON.stringify({
+                type: AudioModelResponseType.CLOSED,
+                data: "Thanks for your enthusiasm! We're thrilled to see your interest in the audio feature — it's on the way and we can't wait to share it with you soon!"
+            } as AudioModelResponse))
+            ws.close()
+
+            // sttProvider.connect(ws, (event) => handleSTTEvents(event, ws, buildUserMessage, processUserRequest))
+            // ttsProvider.createWebSocketConnection(ws, (event) => handleTTSEvents(event,ws))
+        },
+
+        onClose(evt:CloseEvent, ws:WSContext) {
+            console.log('WebSocket connection closed');
+            ws.send(JSON.stringify({type: AudioModelResponseType.CLOSED, data: "WebSocket connection got closed"}))
+
+            if(sttProvider && sttProvider.isConnected()){
+                sttProvider.disconnect();
+            }
+            if(ttsProvider && ttsProvider.isConnected()){
+                ttsProvider.disconnect();
+            }
+        },
+        onError(ws: any, error: any){
+            console.error('WebSocket error:', error);
+            ws.send(JSON.stringify({type: AudioModelResponseType.ERROR, data: "Synaptic Agent WebSocket error"}));
+        },
+        idleTimeout: 30,
+        closeOnBackpressureLimit: true
+    }
 }
 

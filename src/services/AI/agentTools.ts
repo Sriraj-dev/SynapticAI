@@ -7,7 +7,7 @@ import { NotesController } from '../../controllers/notes.controller';
 import { NewTaskRequest, NoteCreateRequest } from '../../utils/apiModels/requestModels';
 import { TaskController } from '../../controllers/tasks.controller';
 import { LRUCache } from "lru-cache";
-import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer, similarity} from 'llamaindex'
+import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer} from 'llamaindex'
 import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from './agentPrompts'
 import {YoutubeTranscript} from 'youtube-transcript'
