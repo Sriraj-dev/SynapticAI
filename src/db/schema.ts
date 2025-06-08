@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { bigint } from "drizzle-orm/pg-core";
+import { bigint, boolean, decimal, index } from "drizzle-orm/pg-core";
 import { uuid } from "drizzle-orm/pg-core";
 import { integer } from "drizzle-orm/pg-core";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
@@ -8,6 +8,30 @@ export enum SubscriptionTier {
     Basic = 'Basic',
     Advanced = 'Advanced',
     Elite = 'Elite'
+}
+
+export enum SubscriptionStatus {
+    ACTIVE = "active",
+    PENDING = "pending",
+    ONHOLD = "on_hold",
+    PAUSED = "paused",
+    CANCELLED = "cancelled",
+    FAILED = "failed",
+    EXPIRED = "expired"
+}
+
+export enum PaymentStatus {
+    Succeeded = 'succeeded',
+    Failed = 'failed',
+    Cancelled = 'cancelled',
+    Processing = 'processing',
+    RequiresCustomerAction = 'requires_customer_action',
+    RequiresMerchantAction = 'requires_merchant_action',
+    RequiresPaymentMethod = 'requires_payment_method',
+    RequiresConfirmation = 'requires_confirmation',
+    RequiresCapture = 'requires_capture',
+    PartiallyCaptured = 'partially_captured',
+    PartiallyCapturedAndCapturable = 'partially_captured_and_capturable'
 }
 
 export enum AccessLevel{
@@ -61,12 +85,68 @@ export const users = pgTable("users", {
   phone: text(),
   memories: text(),
   subscription_tier : text().notNull().default(SubscriptionTier.Basic),
-  amount_paid : bigint("amount_paid", { mode: "number" }).default(0),
+  amount_paid : decimal("amount_paid", { mode: "number" }).notNull().default(0),
   subscription_start_date : timestamp().notNull().defaultNow(),
   subscription_end_date : timestamp(),
   createdAt: timestamp().defaultNow(),
   updatedAt: timestamp().defaultNow(),
 });
+
+//Create a index on userId as well.
+//Subscriptions Table:
+export const subscriptions = pgTable("subscriptions", {
+    subscription_id: text().primaryKey().notNull(),
+    customer_id: text().notNull(),
+    product_id: text().notNull(),
+    discount_id: text(),
+    user_id: text().references(() => users.uid).notNull(),
+
+    username: text(),
+    email: text(),
+    quantity: integer().default(1),
+    subscription_status: text().notNull().default(SubscriptionStatus.ACTIVE),
+    reason: text(), // TODO: How to decide reason? 
+    pre_tax_amount: decimal("pre_tax_amount", { mode: "string" }).notNull(),
+    previous_billing_date: timestamp("previous_billing_date", {withTimezone: true}).notNull(),
+    next_billing_date: timestamp("next_billing_date", {withTimezone: true}),
+    cancel_at_next_billing_date: boolean().default(false),
+    cancelled_at: timestamp(),
+
+    payment_frequency_interval: text().notNull().default("Month"),
+    subscription_period_interval: text().notNull().default("Year"),
+    subscription_period_count: integer().notNull().default(10),
+
+    created_at: timestamp("created_at", {withTimezone: true}).notNull(),
+    updated_at: timestamp("updated_at", {withTimezone: true}).notNull(),
+}, (table) => ({
+    userIdIndex : index("idx_subscriptions_user_id").on(table.user_id)
+}))
+
+export const payments = pgTable("payments", {
+    payment_id: text().primaryKey().notNull(),
+    subscription_id: text().notNull(),
+    discount_id: text(),
+    customer_id : text().notNull(),
+    user_id: text().references(()=> users.uid).notNull(),
+
+    status: text().notNull().default(PaymentStatus.Succeeded),
+    error_message: text(),
+    error_code: text(),
+
+    total_amount: decimal("pre_tax_amount", { mode: "string" }).default("0.00"),
+    tax : decimal("tax", { mode: "string" }).default("0.00"),
+
+    payment_link: text(),
+    payment_method: text(),
+    payment_method_type: text(),
+    currency: text(),
+
+
+    created_at: timestamp().defaultNow(),
+    updated_at: timestamp().defaultNow(),
+}, (table) => ({
+    userIdIndex : index("idx_payments_user_id").on(table.user_id)
+}))
 
 //notes table
 export const notes = pgTable("notes", {

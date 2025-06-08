@@ -78,3 +78,23 @@ export function estimateTokens(text: string, model? : TiktokenModel): number {
   }
 }
 
+export async function sendWhatsappAlert(message : string){
+    const YOUR_PHONE = '+918074821478'; 
+    const CALLMEBOT_APIKEY = process.env.CALLMEBOT_APIKEY;
+
+    // URL encode the message
+    const encodedMessage = encodeURIComponent(message);
+
+    // Construct CallMeBot API URL
+    const apiUrl = `https://api.callmebot.com/whatsapp.php?phone=${YOUR_PHONE}&text=${encodedMessage}&apikey=${CALLMEBOT_APIKEY}`;
+
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) {
+        console.error(`Failed to send WhatsApp message: ${response.statusText}`);
+      }
+    } catch (sendErr) {
+      console.error('Error sending WhatsApp message:', sendErr);
+    }
+}
+

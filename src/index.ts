@@ -3,7 +3,7 @@ import { prettyJSON } from 'hono/pretty-json'
 import { logger } from 'hono/logger'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import callbackRouter from './routes/callback'
+import webhookRouter from './routes/webhooks'
 import notesRouter from './routes/notes'
 import { AppError } from './utils/errors'
 import { StatusCodes } from './utils/statusCodes'
@@ -11,6 +11,7 @@ import taskRouter from './routes/task'
 import askAIRouter from './routes/askAI'
 import {wsRouter, websocket} from './routes/audioWrapper'
 import { logMemory, patchConsoleLogWithTime } from './utils/utility_methods'
+import subscriptionsRouter from './routes/subscriptions'
 
 const app = new Hono()
 
@@ -44,12 +45,13 @@ app.onError((err, c) => {
 logMemory("StartUp")
 app.get('/', (c) => c.text('Welcome to SynapticAI'))
 
-
-app.route('/callback', callbackRouter)
+//TODO: Need to change callback url in clerk, once deployed.
+app.route('/webhooks', webhookRouter)
 app.route('/notes',notesRouter)
 app.route('/tasks', taskRouter)
 app.route("/askAI", askAIRouter)
 app.route("/audioWrapper", wsRouter)
+app.route('/subscriptions', subscriptionsRouter)
 
 Bun.serve({
   fetch: app.fetch,

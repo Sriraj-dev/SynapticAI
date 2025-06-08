@@ -37,7 +37,7 @@ export const BackgroundWorkers = {
                 */
                console.log(`Updating usage metrics for user ${userId} on date ${date}`);
                 //1. Update in postgres database by incrementing the usage metrics.
-                const updatedUserMetrics = await UserController.updateUserUsageMetrics(userId, chatTokensUsed, voiceTokensUsed, internetCallsUsed, semanticQueriesUsed);
+                const updatedUserMetrics = await UserController.incrementUserUsageMetrics(userId, chatTokensUsed, voiceTokensUsed, internetCallsUsed, semanticQueriesUsed);
 
                 //2. Update the redis cache with the new usage metrics
                 if(updatedUserMetrics.lastResetAt.toISOString().split('T')[0] == date) {
