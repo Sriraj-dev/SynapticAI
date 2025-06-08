@@ -118,6 +118,8 @@ export const UsersRepository = {
                 updatedFields.daily_voice_tokens_limit = daily_voice_tokens_limit;
             if(daily_internet_calls_limit != null)
                 updatedFields.daily_internet_calls_limit = daily_internet_calls_limit;
+            if(daily_semantic_queries_limit != null)
+                updatedFields.daily_semantic_queries_limit = daily_semantic_queries_limit;
 
             const userMetrics = await db.update(userUsageMetrics).set(updatedFields).where(eq(userUsageMetrics.userId, userId)).returning()
 
