@@ -8,7 +8,6 @@ export class PaymentGateway{
     private client : Dodopayments;
 
     constructor(){
-        console.log("API KEY : ", process.env.DODO_PAYMENTS_API_KEY)
         this.client = new Dodopayments({
             bearerToken: process.env.DODO_PAYMENTS_API_KEY,
             environment: process.env.ENVIRONMENT == "PROD" ? 'live_mode' : 'test_mode',
