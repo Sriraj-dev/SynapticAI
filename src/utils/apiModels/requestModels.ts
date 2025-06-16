@@ -25,8 +25,6 @@ export type NewTaskRequest = {
 }
 
 export type UpdateTaskRequest = {
-    uid : string,
-    owner_id? : string,
     status? : TaskStatusLevel,
     content? : string,
     title? :string,

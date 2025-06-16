@@ -35,14 +35,14 @@ requires productId from url - path params
 subscriptionsRouter.get("/create/:product_id", async (c : Context)=> {
     const userId = c.get('userId')
     const productId = c.req.param('product_id')
-    const discountId = c.req.query('discount_id')
+    const discountCode = c.req.query('discount_id')
 
     if (!productId) {
         return c.json({ error: "Missing product id" }, StatusCodes.BAD_REQUEST)
     }
 
     try{
-        const paymentDetails = await SubscriptionsController.generateNewPaymentLink(userId, productId, discountId)
+        const paymentDetails = await SubscriptionsController.generateNewPaymentLink(userId, productId, discountCode)
         return c.json(paymentDetails, StatusCodes.OK)
     }catch(err : any){
         return c.json({ error: err.error , message: "Invalid Discount Code!"}, StatusCodes.NOT_FOUND)

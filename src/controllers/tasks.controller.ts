@@ -25,9 +25,9 @@ export const TaskController = {
         }
     },
 
-    async updateTask(task : UpdateTaskRequest){
+    async updateTask(task : UpdateTaskRequest, taskId : string){
         try{
-            const updatedTask = await TaskRepository.updateTask(task as Task)
+            const updatedTask = await TaskRepository.updateTask(task as Task, taskId)
             return updatedTask
         }catch(err){
             console.log(`Error in updating task : ${err}`)

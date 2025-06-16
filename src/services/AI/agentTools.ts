@@ -10,7 +10,8 @@ import { LRUCache } from "lru-cache";
 import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer} from 'llamaindex'
 import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from './agentPrompts'
-import {YoutubeTranscript} from 'youtube-transcript'
+// @ts-ignore
+import TranscriptClient from 'youtube-transcript-api'
 import { logMemory, truncateNotesByTokenLimit } from '../../utils/utility_methods';
 import * as cheerio from "cheerio";
 import { Note } from '../../utils/models';
@@ -38,6 +39,14 @@ const qaResponseSynthesizer = getResponseSynthesizer('compact', {
 const summaryResponseSynthesizer = getResponseSynthesizer('compact', {
   textQATemplate: WebSiteAgentSummaryPrompt
 })
+
+const transcriptClient = new TranscriptClient({
+  headers: {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+  }
+});
+await transcriptClient.ready
+
 
 export const getCurrentDate = new DynamicStructuredTool({
   name: 'get_current_date',
@@ -297,6 +306,7 @@ export const VideoQueryTool = new DynamicStructuredTool({
       return "Apologies, but we couldn't identify the specific video you're referring to. Please ensure the URL contains a valid video reference (e.g., 'v=' parameter)."
 
     const videoId = url.split('v=')[1].split('&')[0];
+    console.log("Video Id:", videoId);
     let vectorIndex : VectorStoreIndex;
     let summaryIndex : SummaryIndex;
 
@@ -306,9 +316,10 @@ export const VideoQueryTool = new DynamicStructuredTool({
         console.log("Using cached data for videoId:", url);
       }else{
           console.log("Cached data not available for this video")
-          const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-          const videoTranscript = transcript.map((item) => item.text).join(' ');
+          const transcript = await transcriptClient.getTranscript(videoId);
 
+          const videoTranscript = transcript.tracks[0].transcript.map((item : any) => item.text).join(' ');
+          
           if(!videoTranscript || videoTranscript.length == 0){
             //TODO : If couldnt find the transcript, get the videos audio and get transcript from whisper model
             return "Apologies, we couldn't retrieve the transcript for this video. The video may not have captions available, or an unexpected error occurred."

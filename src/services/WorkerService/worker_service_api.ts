@@ -5,7 +5,7 @@ import { StatusCodes } from "../../utils/statusCodes"
 //To Handle the api calls to the worker service
 export const WorkerServiceApi = {
 
-    //TODO: This function is not being used currently, as we are fetching the website content directly from this service.
+    //This function is not being used currently, as we are fetching the website content directly from this service.
     async fetchWebsiteContent (url : string): Promise<string> {
         try {
             const baseUrl = process.env.WORKER_SERVICE_URL

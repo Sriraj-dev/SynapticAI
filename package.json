@@ -31,7 +31,7 @@
     "standardwebhooks": "^1.0.0",
     "tiktoken": "^1.0.21",
     "ws": "^8.18.2",
-    "youtube-transcript": "^1.2.1",
+    "youtube-transcript-api": "^3.0.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

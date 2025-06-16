@@ -14,7 +14,7 @@ export class PaymentGateway{
         })
     }
 
-    public async generatePaymentLink(userId:string,username: string, email: string, productId: string, discountId?:string){
+    public async generatePaymentLink(userId:string,username: string, email: string, productId: string, discount_code?:string){
         const subscription = await this.client.subscriptions.create({
             customer: {
                 email: email,
@@ -47,7 +47,7 @@ export class PaymentGateway{
             return_url: "https://synapticai.app",
             billing: { city: 'city', country: 'IN', state: 'state', street: 'street', zipcode: "500090" },
             metadata: { userId: userId, productId: productId },
-            discount_code: discountId ?? null
+            discount_code: discount_code ?? null
         })
 
         return subscription

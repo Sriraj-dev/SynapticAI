@@ -11,12 +11,12 @@ import { UserController } from "./user.controller";
 
 export const SubscriptionsController = {
 
-    async generateNewPaymentLink(userId: string, productId: string, discountId?: string){
+    async generateNewPaymentLink(userId: string, productId: string, discountCode?: string){
         try{
 
             const user = await UserController.getUser(userId)
     
-            const paymentDetails = await paymentGateway.generatePaymentLink(userId, user?.username ?? "" ,user?.email ?? "", productId, discountId)
+            const paymentDetails = await paymentGateway.generatePaymentLink(userId, user?.username ?? "" ,user?.email ?? "", productId, discountCode)
     
             return paymentDetails
         }catch(err){

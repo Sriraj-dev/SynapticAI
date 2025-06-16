@@ -19,5 +19,9 @@ export const RedisStorage = {
         else
             await redis.set(key, value)
     },
+
+    async removeItem(key : string){
+        return await redis.del(key)
+    },
     
 }

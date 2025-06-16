@@ -113,21 +113,23 @@ export const NotesController = {
             return c.json({ message: 'Access Denied' }, StatusCodes.ACCESS_DENIED);
         }
 
-        const update = {
-            uid : noteId,
-            title : body.title,
-            content : body.content,
-            folder : body.folder,
-            updatedAt : new Date()
-        } as Note
+        const update: Partial<Note> = {
+            updatedAt: new Date(),
+        };
+        
+        if (body.title !== undefined) update.title = body.title;
+        if (body.content !== undefined) update.content = body.content;
+        if (body.folder !== undefined) update.folder = body.folder;
 
         const note : Note = await NotesRepository.updateNote(noteId, update)
 
-        redis.rpush(JobQueue.UPDATE_SEMANTICS, JSON.stringify({
-            noteId: noteId,
-            userId: note.owner_id,
-            data: `${update.title ?? ""} ${update.content}`
-        } as CreateSemanticsJob))
+        if(body.content){
+            redis.rpush(JobQueue.UPDATE_SEMANTICS, JSON.stringify({
+                noteId: noteId,
+                userId: note.owner_id,
+                data: `${update.title ?? ""} ${update.content}`
+            } as CreateSemanticsJob))
+        }
 
         return c.json({ message: `Succesfull`, data : note}, StatusCodes.OK);
     }

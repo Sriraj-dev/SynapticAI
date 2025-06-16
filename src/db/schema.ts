@@ -50,6 +50,7 @@ export enum AccessStatus{
 export enum TaskStatusLevel{
     Backlog = 'Backlog',
     Next = 'Next',
+    Open = 'Open',
     Blocked = 'Blocked',
     InProgress = 'InProgress',
     Completed = 'Completed',
@@ -133,7 +134,7 @@ export const payments = pgTable("payments", {
     error_message: text(),
     error_code: text(),
 
-    total_amount: decimal("pre_tax_amount", { mode: "string" }).default("0.00"),
+    total_amount: decimal("total_amount", { mode: "string" }).default("0.00"),
     tax : decimal("tax", { mode: "string" }).default("0.00"),
 
     payment_link: text(),

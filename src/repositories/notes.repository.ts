@@ -91,7 +91,7 @@ export const NotesRepository = {
         }
     },
 
-    async updateNote(id: string, note: Note) : Promise<Note>{
+    async updateNote(id: string, note: Partial<Note>) : Promise<Note>{
         try{
             const updatedNote = await db.update(notes).set(note).where(eq(notes.uid, id)).returning()
             return updatedNote[0]    

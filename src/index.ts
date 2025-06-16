@@ -12,6 +12,7 @@ import askAIRouter from './routes/askAI'
 import {wsRouter, websocket} from './routes/audioWrapper'
 import { logMemory, patchConsoleLogWithTime } from './utils/utility_methods'
 import subscriptionsRouter from './routes/subscriptions'
+import userRouter from './routes/user'
 
 const app = new Hono()
 
@@ -49,6 +50,9 @@ app.get('/', (c) => c.text('Welcome to SynapticAI'))
 app.route('/webhooks', webhookRouter)
 app.route('/notes',notesRouter)
 app.route('/tasks', taskRouter)
+//TODO: Add endpoint to get the user usage metrics.
+//TODO: Add endpoints to get chat history and clear chat history
+app.route('/user', userRouter)
 app.route("/askAI", askAIRouter)
 app.route("/audioWrapper", wsRouter)
 app.route('/subscriptions', subscriptionsRouter)

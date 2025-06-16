@@ -71,6 +71,13 @@
       "when": 1749396471013,
       "tag": "0009_violet_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1750104110090,
+      "tag": "0010_ambitious_energizer",
+      "breakpoints": true
     }
   ]
 }
