@@ -3,7 +3,7 @@ import { NotesRepository } from "../repositories/notes.repository";
 import { NewNote, Note } from '../utils/models'
 import { AccessLevel, AccessStatus, NoteStatusLevel } from "../db/schema";
 import { StatusCodes } from "../utils/statusCodes";
-import { NoteUpdateRequest, NoteCreateRequest } from "../utils/apiModels/requestModels";
+import { NoteUpdateRequest, NoteCreateRequest, UpdateNotesRequestBody } from "../utils/apiModels/requestModels";
 import { NotFoundError } from "../utils/errors";
 import redis from "../services/redis/redis";
 import { CreateSemanticsJob, JobQueue } from "../services/redis/queue_utils";
@@ -96,9 +96,9 @@ export const NotesController = {
         }
 
         //This Will delete the notes semantics as well via cascade delete
-        const note : Note = await NotesRepository.deleteNote(noteId)
+        const notes : Note[] = await NotesRepository.deleteNotes([noteId])
 
-        return c.json({ message: `Succesfull`, data : note}, StatusCodes.OK);
+        return c.json({ message: `Succesfull`, data : notes[0]}, StatusCodes.OK);
     },
 
     async updateUserNote(c:Context){
@@ -127,11 +127,48 @@ export const NotesController = {
             redis.rpush(JobQueue.UPDATE_SEMANTICS, JSON.stringify({
                 noteId: noteId,
                 userId: note.owner_id,
-                data: `${update.title ?? ""} ${update.content}`
+                data: `${update.title ?? ""} ${update.content ?? ""}`
             } as CreateSemanticsJob))
         }
 
         return c.json({ message: `Succesfull`, data : note}, StatusCodes.OK);
+    },
+
+    async deleteMultipleNotes(c : Context){
+        const body = await c.req.json();
+        const noteIds: string[] = body.noteIds;
+        console.log(noteIds)
+        if(!noteIds || noteIds.length === 0){
+            return c.json({ message: 'Please provide noteIds' }, StatusCodes.BAD_REQUEST);
+        }
+
+        const notes : Note[] = await NotesRepository.deleteNotes(noteIds)
+
+        return c.json({ message: `Succesfull`, data : notes}, StatusCodes.OK);
+    },
+
+    async updateMultipleNotes(c : Context){
+        //Note : This endpoint is only called when there is a change in folder structure in frontend, so we need not update semantics in this handler.
+        // Having said that, we need to note somewhere that this endpoint doesnt update the semantics of the notes.
+        const body = await c.req.json<UpdateNotesRequestBody>();
+
+        const { updates } = body;
+
+        if (
+        !Array.isArray(updates) ||
+        updates.some(
+            (u) =>
+            typeof u.id !== "string" ||
+            typeof u.note !== "object" ||
+            u.note === null
+        )
+        ) {
+            return c.json({ error: "Invalid request format" }, 400);
+        }
+
+        const updatedNotes = await NotesRepository.updateMultipleNotes(updates);
+
+        return c.json({ success: true, updated: updatedNotes });
     }
 }
 

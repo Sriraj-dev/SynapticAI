@@ -390,8 +390,12 @@ export const SemanticNoteSearchTool = new DynamicStructuredTool({
       .sort((a, b) => b.similarity - a.similarity)
       .map((note) => (`[\nSimilarity: ${note.similarity.toFixed(2)} %\nNote_Chunk: ${note.content}\nNote ID: ${note.note_id}\n]`));
 
-      const artifacts = semanticNotes.map((note) => note.note_id)
-      console.log(parsedResponse)
+      const artifacts = Array.from(
+        new Map(semanticNotes.map(note => [note.note_id, note])).values()
+      ).map(note => ({
+        url: note.note_id,
+        content: note.content,
+      }));
 
       return [parsedResponse.join('\n'), artifacts]
     }catch(err){

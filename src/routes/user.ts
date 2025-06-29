@@ -23,7 +23,10 @@ userRouter.get('/chatHistory', async(c : Context) => {
     const userId = c.get('userId')
     const sessionId = c.get('sessionId')
 
-    const cachedData = await RedisStorage.getItem(`${userId}-${sessionId}`);
+
+    console.log('sessionId', sessionId)
+    console.log('userId', userId)
+    const cachedData = await RedisStorage.getItem(`ChatHistory:${userId}`);
     const chatHistoryRaw = JSON.parse(cachedData || '[]');
 
     const chatHistory = chatHistoryRaw.map((message: any) => {
@@ -41,7 +44,8 @@ userRouter.delete('/chatHistory', async(c : Context) => {
     const userId = c.get('userId')
     const sessionId = c.get('sessionId')
 
-    await RedisStorage.removeItem(`${userId}-${sessionId}`);
+    
+    await RedisStorage.removeItem(`ChatHistory:${userId}`);
 
     return c.json({ success: true })
 })

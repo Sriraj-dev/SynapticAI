@@ -7,12 +7,13 @@ import { RedisStorage } from "../services/redis/storage";
 import { estimateTokens, preprocessAgentContext } from "../utils/utility_methods";
 import { encode } from "gpt-tokenizer";
 
-
+//askAI
 //TODO: Will be more fun and meaningful, if implemented using OOPS concepts, instead of a function like below.
 export const AgentController = {
     async *invokeAgent(userId : string, sessionId:string, request : AgentRequest):AsyncGenerator<AgentEvent>{
 
-        const cachedData = await RedisStorage.getItem(`${userId}-${sessionId}`);
+        //TODO: Do we need sessionId in the key ?
+        const cachedData = await RedisStorage.getItem(`ChatHistory:${userId}`);
         let chatHistory = JSON.parse(cachedData || '[]') as BaseMessage[];
 
         chatHistory = await preprocessAgentContext({messages: chatHistory})
@@ -58,10 +59,9 @@ export const AgentController = {
                             const notes = message.artifact
                             console.log("semantic_tool response received")
                             for(const note of notes){
-                                console.log("Note Link: ", note)
                                 yield {
                                     type: "notes-link",
-                                    data: {event:"notes-link", content: note},
+                                    data: {event:"notes-link", content: '', links: note},
                                 }
                             }
                         }
@@ -125,6 +125,6 @@ export const AgentController = {
 
 
         //Save messages into redis:
-        await RedisStorage.setItemAsync(`${userId}-${sessionId}`, JSON.stringify([...initialState.messages,...newMessages]), 3600)
+        await RedisStorage.setItemAsync(`ChatHistory:${userId}`, JSON.stringify([...initialState.messages,...newMessages]), 86400)
     }
 }

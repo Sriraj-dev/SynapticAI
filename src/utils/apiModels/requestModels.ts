@@ -1,4 +1,5 @@
 import { AccessLevel, AccessStatus, TaskStatusLevel } from "../../db/schema"
+import { Note } from "../models"
 
 
 export type NoteUpdateRequest = {
@@ -53,3 +54,13 @@ export type AgentRequest = {
     url?: string,
     context?: string,
 }
+
+// For updating mutliple notes
+export type UpdateNotePayload = {
+    id: string;
+    note: Partial<Note>;
+};
+
+export type UpdateNotesRequestBody = {
+updates: UpdateNotePayload[];
+};

@@ -3,7 +3,7 @@
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 import { MiddlewareHandler } from "hono"; 
 import { StatusCodes } from "../utils/statusCodes";
-import { ClerkClient, createClerkClient, verifyToken } from "@clerk/backend";
+import { verifyToken } from "@clerk/backend";
 
 /*
 

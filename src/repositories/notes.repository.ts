@@ -1,5 +1,5 @@
 
-import { eq, gte, lte, sql } from 'drizzle-orm'
+import { eq, exists, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '../db/index'
 import {AccessLevel, AccessStatus, noteAccess, notes, users} from '../db/schema'
 import { NewNote, Note, NoteAccess, SemanticNote, SemanticSearchResponse } from '../utils/models'
@@ -101,12 +101,40 @@ export const NotesRepository = {
         }
     },
 
-    async deleteNote(id: string) : Promise<Note> {
+    async updateMultipleNotes(
+        updates: { id: string; note: Partial<Note> }[]
+      ): Promise<Note[]> {
+        try {
+            const results: Note[] = [];
+
+            for (const { id, note } of updates) {
+                const updatedNote = await db
+                .update(notes)
+                .set({
+                    ...note,
+                    updatedAt: new Date(),
+                })
+                .where(eq(notes.uid, id))
+                .returning();
+
+                if (updatedNote.length > 0) {
+                    results.push(updatedNote[0]);
+                }
+            }
+
+            return results;
+        } catch (err) {
+          console.error(`Unable to update notes. Error: ${err}`);
+          throw err;
+        }
+    },
+
+    async deleteNotes(ids: string[]) : Promise<Note[]> {
         try{
-            const deletedNote = await db.delete(notes).where(eq(notes.uid, id)).returning()
-            return deletedNote[0]
-        }catch(err){
-            console.log(`Unable to delete the note for the id : ${id}, Error : ${err}`)
+            const deletedNotes = await db.delete(notes).where(inArray(notes.uid, ids)).returning()
+            return deletedNotes
+        }catch (err) {
+            console.log(`Unable to delete the notes for ids: ${ids.join(', ')}, Error: ${err}`);
             throw err;
         }
     },
