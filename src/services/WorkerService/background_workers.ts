@@ -14,6 +14,7 @@ export const BackgroundWorkers = {
                 //2. Check if the metrics belongs to the current date and if not, reset the metrics.
                 if (userMetrics && userMetrics.lastResetAt.toISOString().split('T')[0] !== date) {
                     // Reset the metrics for the user
+                    console.log(`Resetting usage metrics for user ${userId} on date ${date}`);
                     userMetrics = await UserController.resetUserUsageMetrics(userId);
                 }
                 
