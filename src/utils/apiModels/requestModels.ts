@@ -3,11 +3,8 @@ import { Note } from "../models"
 
 
 export type NoteUpdateRequest = {
-    noteId : string,
-    userId : string,
     title?: string,
-    content?: string,
-    folder? : string
+    content?: string
 }
 
 export type NoteCreateRequest = {
@@ -61,6 +58,6 @@ export type UpdateNotePayload = {
     note: Partial<Note>;
 };
 
-export type UpdateNotesRequestBody = {
-updates: UpdateNotePayload[];
+export type UpdateNotesMetaDataRequestBody = {
+    updates: UpdateNotePayload[];
 };

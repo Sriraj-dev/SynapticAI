@@ -66,7 +66,7 @@ notesRouter.post("/requestAccess", async (c : Context) => {
 
 
 notesRouter.delete("/:id", (c)=> NotesController.deleteUserNote(c))
-notesRouter.post("/:id", (c) => NotesController.updateUserNote(c))
+notesRouter.patch("/:id", (c) => NotesController.updateUserNote(c))
 
 
 export default notesRouter;

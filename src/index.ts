@@ -26,7 +26,7 @@ app.use(
     //TODO, when frontend and chrome extension are deployed, we can modify the cors policy
     origin: '*',
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PATCH' ,'PUT', 'DELETE', 'OPTIONS'],
   })
 );
 
