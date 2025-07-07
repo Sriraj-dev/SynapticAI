@@ -10,13 +10,12 @@ import { LRUCache } from "lru-cache";
 import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer} from 'llamaindex'
 import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from './agentPrompts'
-// @ts-ignore
-import TranscriptClient from 'youtube-transcript-api'
 import { logMemory, truncateNotesByTokenLimit } from '../../utils/utility_methods';
 import * as cheerio from "cheerio";
 import { Note } from '../../utils/models';
 import puppeteer, { Browser } from 'puppeteer';
 import {TavilySearch} from "@langchain/tavily"
+import { fetchTranscriptFromPublicAPI } from '../../utils/yt_transcript_utils';
 
 // Cache to store the websites content, to avoid frequent scraping 
 //TODO: Figure out how to store this in redis like storage 
@@ -39,13 +38,6 @@ const qaResponseSynthesizer = getResponseSynthesizer('compact', {
 const summaryResponseSynthesizer = getResponseSynthesizer('compact', {
   textQATemplate: WebSiteAgentSummaryPrompt
 })
-
-const transcriptClient = new TranscriptClient({
-  headers: {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
-  }
-});
-await transcriptClient.ready
 
 
 export const getCurrentDate = new DynamicStructuredTool({
@@ -316,9 +308,8 @@ export const VideoQueryTool = new DynamicStructuredTool({
         console.log("Using cached data for videoId:", url);
       }else{
           console.log("Cached data not available for this video")
-          const transcript = await transcriptClient.getTranscript(videoId);
+          const videoTranscript = await fetchTranscriptFromPublicAPI(videoId);
 
-          const videoTranscript = transcript.tracks[0].transcript.map((item : any) => item.text).join(' ');
           
           if(!videoTranscript || videoTranscript.length == 0){
             //TODO : If couldnt find the transcript, get the videos audio and get transcript from whisper model

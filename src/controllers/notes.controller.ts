@@ -9,7 +9,6 @@ import { CreateSemanticsJob, JobTypes, UpdateSemanticsJob } from "../services/re
 import { notesEmbeddingModel, SEMANTIC_SEARCH_SIMILARITY_THRESHOLD } from "../services/AI/aiModels";
 import { persistDataWorkerQueue, semanticsWorkerQueue } from "../services/redis/bullmq";
 import { RedisStorage } from "../services/redis/storage";
-import Redis from "ioredis";
 
 
 export const NotesController = {
