@@ -5,7 +5,7 @@ import { AccessLevel, AccessStatus, NoteStatusLevel } from "../db/schema";
 import { StatusCodes } from "../utils/statusCodes";
 import { NoteUpdateRequest, NoteCreateRequest, UpdateNotesMetaDataRequestBody } from "../utils/apiModels/requestModels";
 import { NotFoundError } from "../utils/errors";
-import { CreateSemanticsJob, JobTypes, UpdateSemanticsJob } from "../services/redis/queue_utils";
+import { CreateSemanticsJob, DeleteSemanticsJob, JobTypes, UpdateSemanticsJob } from "../services/redis/queue_utils";
 import { notesEmbeddingModel, SEMANTIC_SEARCH_SIMILARITY_THRESHOLD } from "../services/AI/aiModels";
 import { persistDataWorkerQueue, semanticsWorkerQueue } from "../services/redis/bullmq";
 import { RedisStorage } from "../services/redis/storage";
@@ -117,6 +117,22 @@ export const NotesController = {
         return c.json({ message: `Succesfull`, data : notes[0]}, StatusCodes.OK);
     },
 
+    async deleteUserNoteEmbeddings(c : Context){
+        const userId = c.get('userId')
+        const noteId = c.req.param('id')
+
+        semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`)
+        semanticsWorkerQueue.add(
+            JobTypes.DELETE_SEMANTICS,
+            JSON.stringify({ noteId: noteId } as DeleteSemanticsJob),
+            { removeOnComplete: 1 , jobId: `delete-note-semantics-${noteId}`, delay: 300000}
+        )
+
+        await RedisStorage.setItemAsync(`Note:${noteId}`, JSON.stringify({status : NoteStatusLevel.NotMemorized}), 60 * 60)
+
+        return c.json({message: `Successfull`, data : {status : NoteStatusLevel.NotMemorized}}, StatusCodes.OK);
+    },
+
     //This endpoint is called only when the content of the note is changed, updating folder & title are handled by different endpoint.
     //This endpoint is being repeatedly called from the frontend's text editor changes, So it is very important to debounce the requests, instead of updating the database & vectors on every call.
     async updateUserNote(c:Context){
@@ -124,6 +140,8 @@ export const NotesController = {
         const noteId = c.req.param('id')
 
         const body = await c.req.json<NoteUpdateRequest>()
+
+        if(body.generateEmbeddings === undefined) body.generateEmbeddings = true;
 
         const [accessLevel, ownerId] = await NotesRepository.getNoteAccess(userId, noteId)
 
@@ -147,7 +165,7 @@ export const NotesController = {
         }
 
 
-        if(body.content !== undefined){
+        if(body.content !== undefined && body.generateEmbeddings){
             //Triggering Background worker via redis queue update the note semantics.
             console.log("Pushing Update semantics job with 10 min delay")
 
@@ -163,7 +181,7 @@ export const NotesController = {
             )
         }
 
-        return c.json({ message: `Succesfull`, data : {content : body.content, status: NoteStatusLevel.Memorizing} as Note}, StatusCodes.OK);
+        return c.json({ message: `Succesfull`, data : {content : body.content, status: (body.generateEmbeddings) ? NoteStatusLevel.Memorizing : NoteStatusLevel.NotMemorized} as Note}, StatusCodes.OK);
     },
 
     async deleteMultipleNotes(c : Context){

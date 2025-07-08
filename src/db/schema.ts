@@ -50,7 +50,6 @@ export enum AccessStatus{
 export enum TaskStatusLevel{
     Backlog = 'Backlog',
     Next = 'Next',
-    Open = 'Open',
     Blocked = 'Blocked',
     InProgress = 'InProgress',
     Completed = 'Completed',
@@ -61,6 +60,7 @@ export enum NoteStatusLevel{
     Memorizing = 'Memorizing',
     Updating = 'Updating',
     Completed = 'Completed',
+    NotMemorized = 'Not Memorized',
     FailedToMemorize = 'Failed To Memorize',
     FailedToCreate = 'Failed To Create',
 }

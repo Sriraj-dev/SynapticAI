@@ -12,7 +12,6 @@ notesRouter.use('*', authMiddleware)
 notesRouter.use("*", addSessionDetails)
 
 notesRouter.get("/", (c) => NotesController.getAllNotes(c))
-notesRouter.get("/:id", (c) => NotesController.getNoteById(c))
 
 notesRouter.delete("/delete", (c) => NotesController.deleteMultipleNotes(c))
 notesRouter.post("/update", (c) => NotesController.updateMultipleNotes(c))
@@ -64,7 +63,9 @@ notesRouter.post("/requestAccess", async (c : Context) => {
     return c.json({message: "Successfully Executed", data: request}, StatusCodes.OK)
 }) 
 
+notesRouter.delete("/embeddings/:id", (c) => NotesController.deleteUserNoteEmbeddings(c))
 
+notesRouter.get("/:id", (c) => NotesController.getNoteById(c))
 notesRouter.delete("/:id", (c)=> NotesController.deleteUserNote(c))
 notesRouter.patch("/:id", (c) => NotesController.updateUserNote(c))
 

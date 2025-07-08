@@ -4,7 +4,8 @@ import { Note } from "../models"
 
 export type NoteUpdateRequest = {
     title?: string,
-    content?: string
+    content?: string,
+    generateEmbeddings : boolean 
 }
 
 export type NoteCreateRequest = {
