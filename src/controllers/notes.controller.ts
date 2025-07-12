@@ -112,6 +112,9 @@ export const NotesController = {
 
         //This Will delete the notes semantics as well via cascade delete
         const notes : Note[] = await NotesRepository.deleteNotes([noteId])
+        persistDataWorkerQueue.remove(`persist-note-${noteId}`)
+        semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`)
+
         await RedisStorage.removeItem(`Note:${noteId}`) 
 
         return c.json({ message: `Succesfull`, data : notes[0]}, StatusCodes.OK);
@@ -151,7 +154,7 @@ export const NotesController = {
         
         if(body.content !== undefined){
             console.log("Updating Redis cache with new note content")
-            await RedisStorage.setItemAsync(`Note:${noteId}`, JSON.stringify({content : body.content, status: NoteStatusLevel.Memorizing}), 60 * 60) // expires in 1 hour.
+            await RedisStorage.setItemAsync(`Note:${noteId}`, JSON.stringify({content : body.content, status: (body.generateEmbeddings)? NoteStatusLevel.Memorizing : NoteStatusLevel.NotMemorized}), 60 * 60) // expires in 1 hour.
 
             persistDataWorkerQueue.add(
                 JobTypes.PERSIST_NOTE_DATA,

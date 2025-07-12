@@ -61,6 +61,7 @@ export enum NoteStatusLevel{
     Updating = 'Updating',
     Completed = 'Completed',
     NotMemorized = 'Not Memorized',
+    TierLimitReached = 'Memory Limit Reached',
     FailedToMemorize = 'Failed To Memorize',
     FailedToCreate = 'Failed To Create',
 }
