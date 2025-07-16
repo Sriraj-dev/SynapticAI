@@ -468,6 +468,19 @@ export async function getWebsiteContent(url: string) {
     let content = '';
 
     try {
+      const res = await fetch(url);
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      $('script, style, nav, header, footer, iframe, noscript').remove();
+      content = $('body').text().replace(/\s+/g, ' ').trim();
+      console.log("Cheerio (CSR) content fetched successfully");
+
+      return content;
+    } catch (err) {
+      console.error('Cheerio failed, Falling back to Puppeteer:', err);
+    }
+
+    try {
       const browser = await getOrCreateBrowser();
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 8000 });
@@ -481,20 +494,7 @@ export async function getWebsiteContent(url: string) {
       console.log("Puppeteer (SSR) content fetched successfully");
       return content;
     } catch (err) {
-      console.warn('Puppeteer failed, falling back to Cheerio:', err);
-    }
-
-    try {
-      const res = await fetch(url);
-      const html = await res.text();
-      const $ = cheerio.load(html);
-      $('script, style, nav, header, footer, iframe, noscript').remove();
-      content = $('body').text().replace(/\s+/g, ' ').trim();
-      console.log("Cheerio (CSR) content fetched successfully");
-
-      return content;
-    } catch (err) {
-      console.error('Cheerio also failed:', err);
+      console.warn('Puppeteer also failed', err);
       return '';
     }
 }

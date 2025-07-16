@@ -71,7 +71,7 @@ export const NotesController = {
                 if (parsedUpdates.status) {
                     note.status = parsedUpdates.status;
                 }
-                if (parsedUpdates.content) {
+                if (parsedUpdates.content !== null && parsedUpdates.content !== undefined) {
                     note.content = parsedUpdates.content;
                 }
             }
@@ -112,8 +112,8 @@ export const NotesController = {
 
         //This Will delete the notes semantics as well via cascade delete
         const notes : Note[] = await NotesRepository.deleteNotes([noteId])
-        persistDataWorkerQueue.remove(`persist-note-${noteId}`)
-        semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`)
+        persistDataWorkerQueue.remove(`persist-note-${noteId}`).catch(()=>{})
+        semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`).catch(()=>{})
 
         await RedisStorage.removeItem(`Note:${noteId}`) 
 
@@ -124,7 +124,7 @@ export const NotesController = {
         const userId = c.get('userId')
         const noteId = c.req.param('id')
 
-        semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`)
+        semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`).catch(()=>{})
         semanticsWorkerQueue.add(
             JobTypes.DELETE_SEMANTICS,
             JSON.stringify({ noteId: noteId } as DeleteSemanticsJob),
@@ -153,9 +153,10 @@ export const NotesController = {
         }
         
         if(body.content !== undefined){
-            console.log("Updating Redis cache with new note content")
+            console.log("Debouncing the postgres update for 5 minutes")
             await RedisStorage.setItemAsync(`Note:${noteId}`, JSON.stringify({content : body.content, status: (body.generateEmbeddings)? NoteStatusLevel.Memorizing : NoteStatusLevel.NotMemorized}), 60 * 60) // expires in 1 hour.
-
+            
+            await persistDataWorkerQueue.remove(`persist-note-${noteId}`).catch(()=>{})
             persistDataWorkerQueue.add(
                 JobTypes.PERSIST_NOTE_DATA,
                 JSON.stringify({noteId: noteId}),
@@ -172,7 +173,7 @@ export const NotesController = {
             //Triggering Background worker via redis queue update the note semantics.
             console.log("Pushing Update semantics job with 10 min delay")
 
-            semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`)
+            await semanticsWorkerQueue.remove(`update-note-semantics-${noteId}`).catch(()=>{})
             semanticsWorkerQueue.add(
                 JobTypes.UPDATE_SEMANTICS,
                 JSON.stringify({ noteId: noteId, userId: ownerId, data: `${body.title ?? ""} ${body.content ?? ""}` } as UpdateSemanticsJob),

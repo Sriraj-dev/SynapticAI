@@ -17,7 +17,7 @@ export const RedisStorage = {
         if(duration !== undefined && duration !== null)
             await redis.set(key, value, 'EX', duration)
         else
-            await redis.set(key, value)
+            await redis.set(key, value, 'KEEPTTL')
     },
 
     async removeItem(key : string){

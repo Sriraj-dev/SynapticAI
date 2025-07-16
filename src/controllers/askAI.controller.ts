@@ -80,7 +80,8 @@ export const AgentController = {
 
                         yield {
                             type: "tool",
-                            tokens_used: encode(message.content.toString()).length,
+                            //TODO: Might have to include 
+                            // tokens_used: encode(message.content.toString()).length,
                             data: { event:"tool", content: message.content , tools_used: message.name},
                         };
 

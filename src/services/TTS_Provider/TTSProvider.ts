@@ -33,6 +33,8 @@ export class TTS_Provider {
         if(!this.isWebSocket) 
             throw new AppError("WebSocket connection to ElevenLabs is not expected", StatusCodes.INTERNAL_SERVER_ERROR)
 
+        //TODO: Change the ws url to deepgram
+        //TODO: Change the API Key.
         const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${this.VOICE_ID}/stream-input?model_id=${this.MODEL}`
         this.llSocket = new WebSocket(uri, {
             headers: { 'xi-api-key': `${this.API_KEY}` },
@@ -56,6 +58,7 @@ export class TTS_Provider {
         }
 
         this.llSocket.onmessage = (event) => {
+            //TODO: Change the receiveing func as per deepgram.
             const data = JSON.parse(event.data.toString());
             if (data['audio']) {
                 // const audioBuffer = Buffer.from(data['audio']).toString('base64');
@@ -82,6 +85,7 @@ export class TTS_Provider {
         this.heartbeatInterval = setInterval(() => {
             if (this.llSocket && this.llSocket.readyState === this.llSocket.OPEN) {
               console.log("📤 Hearbeat sent to ElevenLabs");
+              //TODO: Heartbeat required in deepgram?
               this.llSocket.send(
                 JSON.stringify({
                   text: ' ', 
@@ -102,6 +106,7 @@ export class TTS_Provider {
             if(!this.llSocket)
                 throw new AppError("ElevenLabs Socket Connection is not established, Please try again later", StatusCodes.INTERNAL_SERVER_ERROR)
 
+            //TODO: Change the format of sending the message - type : "speak", text : ""
             this.llSocket.send(
                 JSON.stringify({
                     text: text_to_convert,
@@ -119,6 +124,7 @@ export class TTS_Provider {
             if(!this.llSocket)
                 throw new AppError("ElevenLabs Socket Connection is not established, Please try again later", StatusCodes.INTERNAL_SERVER_ERROR)
 
+            //TODO: Change the format of flushing the message.
             this.llSocket.send(
                 JSON.stringify({
                     text: ' ',
