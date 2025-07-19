@@ -13,6 +13,7 @@ OrpheusTTS, IndexTTS, F5-TTS
 */
 
 export class TTS_Provider {
+    private RATE = 24000;
     private llSocket : WebSocket | null = null;
     private elevenlabsClient : ElevenLabsClient | null = null
 
@@ -34,7 +35,7 @@ export class TTS_Provider {
             throw new AppError("WebSocket connection to ElevenLabs is not expected", StatusCodes.INTERNAL_SERVER_ERROR)
 
         //TODO: Replaced LL with Deepgram
-        const uri = `wss://api.deepgram.com/v1/speak?model=aura-2-athena-en&encoding=linear16`
+        const uri = `wss://api.deepgram.com/v1/speak?model=aura-2-athena-en&encoding=linear16&sample_rate=${this.RATE}`
         this.llSocket = new WebSocket(uri, {
             headers: { 'Authorization': `Token ${this.API_KEY}` },
         });
@@ -44,43 +45,28 @@ export class TTS_Provider {
         // });
 
         this.llSocket.onopen = (event) => {
-            console.log("🔌 ElevenLabs socket connected");
+            console.log("🔌 DeepGram STT socket connected");
 
-            //TODO: Anything to do here if deepgram? 
-            // this.llSocket?.send(
-            //     JSON.stringify({
-            //       text: ' ',
-            //       voice_settings: {
-            //         stability: 0.5,
-            //         similarity_boost: 0.8,
-            //         use_speaker_boost: false,
-            //         speed:1.2
-            //       },
-            //       generation_config: { chunk_length_schedule: [80, 120, 180, 250] },
-            //     })
-            // );
+            this.sendMessageViaSocket("Hello there, Welcome to Synaptic AI! How may I assist you today?")
+            this.flushSocketConnection()
         }
 
         this.llSocket.onmessage = (event) => {
             //TODO: Change the receiveing func as per deepgram.
-            console.log("🔊 Received message from Deepgram:")
-
+            console.log(event)
             if(event.type == "message"){
-                const arrayBuffer = event.data as ArrayBuffer;
-                const uint8Array = new Uint8Array(arrayBuffer);
-                const buffer = Buffer.from(uint8Array); // now valid
-
-                const base64Audio = buffer.toString('base64');
-
-
-                // Wrap in your expected message format
-                let message = {
-                    type: AudioModelResponseType.PARTIAL_AUDIO_RESPONSE,
-                    data: "", // optional metadata if needed
-                    audio: base64Audio
-                };
-
-                onSTTEvent(message)
+                if(event.data instanceof Buffer){
+                    console.log("🔊 Received message from Deepgram:")
+                    const base64Audio = event.data.toString("base64");
+                    // Wrap in your expected message format
+                    let message = {
+                        type: AudioModelResponseType.PARTIAL_AUDIO_RESPONSE,
+                        data: "", // optional metadata if needed
+                        audio: base64Audio
+                    };
+    
+                    onSTTEvent(message)
+                }
             }
             // console.log(event.data.toString())
             // const data = JSON.parse(event.data.toString());
