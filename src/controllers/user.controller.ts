@@ -1,5 +1,6 @@
-import { UsersRepository } from "../repositories/users.repository"
 import { SubscriptionTier } from "../db/schema";
+import { UsersRepository } from "../repositories/users.repository"
+
 import { NewUser } from "../utils/models";
 import { Context } from "hono";
 

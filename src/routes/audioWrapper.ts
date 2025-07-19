@@ -1,6 +1,6 @@
-import {  Context, Hono } from "hono";
+import {  Hono } from "hono";
 import { createBunWebSocket } from "hono/bun";
-import { addSessionDetails, authMiddleware, wsAuthMiddleware } from "../middlewares/auth";
+import { wsAuthMiddleware } from "../middlewares/auth";
 import { greetingAgentHandler, SynapticAgentHandler } from "../controllers/audioWrapper.controller";
 import { checkAudioTokenLimit } from "../middlewares/checkUsageMetrics";
 

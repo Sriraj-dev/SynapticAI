@@ -4,11 +4,45 @@ import { uuid } from "drizzle-orm/pg-core";
 import { integer } from "drizzle-orm/pg-core";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
+type UsageLimits = {
+    embedded_tokens_limit: number;
+    daily_chat_tokens_limit: number;
+    daily_voice_tokens_limit: number;
+    daily_internet_calls_limit: number;
+    daily_semantic_queries_limit: number;
+};
+
 export enum SubscriptionTier {
     Basic = 'Basic',
     Advanced = 'Advanced',
     Elite = 'Elite'
 }
+
+export const SubscriptionLimits: Record<SubscriptionTier, UsageLimits> = {
+    [SubscriptionTier.Basic]: {
+      embedded_tokens_limit: 1000000,
+      daily_chat_tokens_limit: 35000,
+      daily_voice_tokens_limit: 200,
+      daily_internet_calls_limit: 5,
+      daily_semantic_queries_limit: 20,
+    },
+    [SubscriptionTier.Advanced]: {
+      embedded_tokens_limit: 5000000,
+      daily_chat_tokens_limit: 70000,
+      daily_voice_tokens_limit: 2000,
+      daily_internet_calls_limit: 15,
+      daily_semantic_queries_limit: 60,
+    },
+    [SubscriptionTier.Elite]: {
+      embedded_tokens_limit: 25000000,
+      daily_chat_tokens_limit: 100000,
+      daily_voice_tokens_limit: 100,
+      daily_internet_calls_limit: 50,
+      daily_semantic_queries_limit: 200,
+    },
+};
+
+
 
 export enum SubscriptionStatus {
     ACTIVE = "active",
@@ -174,23 +208,23 @@ export const userUsageMetrics = pgTable("user_usage_metrics", {
     subscription_tier: text().notNull().default(SubscriptionTier.Basic), //TODO: We can remove this column if not required.
 
     total_embedded_tokens: integer().default(0).notNull(),
-    embedded_tokens_limit: integer().default(10000).notNull(),
+    embedded_tokens_limit: integer().default(SubscriptionLimits[SubscriptionTier.Basic].embedded_tokens_limit).notNull(),
 
     total_chat_tokens: integer().default(0).notNull(),
     today_chat_tokens: integer().default(0).notNull(),
-    daily_chat_tokens_limit: integer().default(5000).notNull(), // TODO: Decide the token limit for chat
+    daily_chat_tokens_limit: integer().default(SubscriptionLimits[SubscriptionTier.Basic].daily_chat_tokens_limit).notNull(), // TODO: Decide the token limit for chat
 
     total_voice_tokens: integer().default(0).notNull(),
     today_voice_tokens: integer().default(0).notNull(),
-    daily_voice_tokens_limit: integer().default(700).notNull(), // TODO: Decide the token limit for voice
+    daily_voice_tokens_limit: integer().default(SubscriptionLimits[SubscriptionTier.Basic].daily_voice_tokens_limit).notNull(), // TODO: Decide the token limit for voice
 
     total_internet_calls: integer().default(0).notNull(),
     today_internet_calls: integer().default(0).notNull(),
-    daily_internet_calls_limit: integer().default(10).notNull(), // TODO: Decide the limit for internet calls
+    daily_internet_calls_limit: integer().default(SubscriptionLimits[SubscriptionTier.Basic].daily_internet_calls_limit).notNull(), // TODO: Decide the limit for internet calls
 
     total_semantic_queries: integer().default(0).notNull(),
     today_semantic_queries: integer().default(0).notNull(),
-    daily_semantic_queries_limit: integer().default(10).notNull(), //TODO: (if requried) Decide the limit for semantic queries
+    daily_semantic_queries_limit: integer().default(SubscriptionLimits[SubscriptionTier.Basic].daily_semantic_queries_limit).notNull(), //TODO: (if requried) Decide the limit for semantic queries
 
     lastResetAt: timestamp().defaultNow().notNull(),
     updatedAt: timestamp().defaultNow().notNull(),

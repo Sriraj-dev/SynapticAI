@@ -37,34 +37,6 @@ export type UserUsageMetrics = InferSelectModel<typeof userUsageMetrics>
 export type NewUserSubscription = InferInsertModel<typeof subscriptions>
 export type UserSubscription = InferSelectModel<typeof subscriptions>
 
-type UsageLimits = {
-    embedded_tokens_limit: number;
-    daily_chat_tokens_limit: number;
-    daily_voice_tokens_limit: number;
-    daily_internet_calls_limit: number;
-    daily_semantic_queries_limit: number;
-  };
+
   
-  export const SubscriptionLimits: Record<SubscriptionTier, UsageLimits> = {
-    [SubscriptionTier.Basic]: {
-      embedded_tokens_limit: 10000,
-      daily_chat_tokens_limit: 5000,
-      daily_voice_tokens_limit: 200,
-      daily_internet_calls_limit: 5,
-      daily_semantic_queries_limit: 20,
-    },
-    [SubscriptionTier.Advanced]: {
-      embedded_tokens_limit: 50000,
-      daily_chat_tokens_limit: 50000,
-      daily_voice_tokens_limit: 2000,
-      daily_internet_calls_limit: 15,
-      daily_semantic_queries_limit: 60,
-    },
-    [SubscriptionTier.Elite]: {
-      embedded_tokens_limit: 500000,
-      daily_chat_tokens_limit: 500000,
-      daily_voice_tokens_limit: 100,
-      daily_internet_calls_limit: 50,
-      daily_semantic_queries_limit: 200,
-    },
-};
+

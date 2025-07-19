@@ -1,8 +1,7 @@
 import { UsersRepository } from "../repositories/users.repository";
-import { SubscriptionLimits } from "../utils/models";
 import { PaymentData, SubscriptionData } from "../services/PaymentGateway/models";
 import { db } from "../db";
-import { subscriptions, SubscriptionTier, users } from "../db/schema";
+import { SubscriptionLimits, subscriptions, SubscriptionTier, users } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { SubscriptionsRepository } from "../repositories/subscriptions.repository";
 import { paymentGateway, PaymentGateway } from "../services/PaymentGateway/paymentGateway";

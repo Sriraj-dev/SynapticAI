@@ -134,7 +134,7 @@ export const greetingAgentHandler : any = () => {
 
             sttProvider = new STT_Provider(DEEPGRAM_API_KEY);
             onBoardingAgent = new OnBoardingAgent(OnBoardingAgentSystemPrompt);
-            ttsProvider = new TTS_Provider(ELEVENLABS_API_KEY, SynapticAIVoices["Eryn (Female)"], true)
+            ttsProvider = new TTS_Provider(DEEPGRAM_API_KEY, SynapticAIVoices["Eryn (Female)"], true)
 
             sttProvider.connect(ws, (event) => handleSTTEvents(event, ws, buildUserMessage, processUserRequest))
             
