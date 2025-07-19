@@ -13,6 +13,7 @@ OrpheusTTS, IndexTTS, F5-TTS
 */
 
 export class TTS_Provider {
+    private RATE = 24000;
     private llSocket : WebSocket | null = null;
     private elevenlabsClient : ElevenLabsClient | null = null
 
@@ -33,35 +34,49 @@ export class TTS_Provider {
         if(!this.isWebSocket) 
             throw new AppError("WebSocket connection to ElevenLabs is not expected", StatusCodes.INTERNAL_SERVER_ERROR)
 
-        const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${this.VOICE_ID}/stream-input?model_id=${this.MODEL}`
+        //TODO: Replaced LL with Deepgram
+        const uri = `wss://api.deepgram.com/v1/speak?model=aura-2-athena-en&encoding=linear16&sample_rate=${this.RATE}`
         this.llSocket = new WebSocket(uri, {
-            headers: { 'xi-api-key': `${this.API_KEY}` },
+            headers: { 'Authorization': `Token ${this.API_KEY}` },
         });
+        // const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${this.VOICE_ID}/stream-input?model_id=${this.MODEL}`
+        // this.llSocket = new WebSocket(uri, {
+        //     headers: { 'xi-api-key': `${this.API_KEY}` },
+        // });
 
         this.llSocket.onopen = (event) => {
-            console.log("🔌 ElevenLabs socket connected");
+            console.log("🔌 DeepGram STT socket connected");
 
-            this.llSocket?.send(
-                JSON.stringify({
-                  text: ' ',
-                  voice_settings: {
-                    stability: 0.5,
-                    similarity_boost: 0.8,
-                    use_speaker_boost: false,
-                    speed:1.2
-                  },
-                  generation_config: { chunk_length_schedule: [80, 120, 180, 250] },
-                })
-            );
+            this.sendMessageViaSocket("Hello there, Welcome to Synaptic AI! How may I assist you today?")
+            this.flushSocketConnection()
         }
 
         this.llSocket.onmessage = (event) => {
-            const data = JSON.parse(event.data.toString());
-            if (data['audio']) {
-                // const audioBuffer = Buffer.from(data['audio']).toString('base64');
-                let message = {type: AudioModelResponseType.PARTIAL_AUDIO_RESPONSE, data: "", audio: data['audio']}
-                onSTTEvent(message)
+            //TODO: Change the receiveing func as per deepgram.
+            console.log(event)
+            if(event.type == "message"){
+                if(event.data instanceof Buffer){
+                    console.log("🔊 Received message from Deepgram:")
+                    const base64Audio = event.data.toString("base64");
+                    // Wrap in your expected message format
+                    let message = {
+                        type: AudioModelResponseType.PARTIAL_AUDIO_RESPONSE,
+                        data: "", // optional metadata if needed
+                        audio: base64Audio
+                    };
+    
+                    onSTTEvent(message)
+                }
             }
+            // console.log(event.data.toString())
+            // const data = JSON.parse(event.data.toString());
+            // console.log(data)
+            
+            // if (data['audio']) {
+            //     // const audioBuffer = Buffer.from(data['audio']).toString('base64');
+            //     let message = {type: AudioModelResponseType.PARTIAL_AUDIO_RESPONSE, data: "", audio: data['audio']}
+            //     onSTTEvent(message)
+            // }
         }
 
         this.llSocket.onerror = (error) => {
@@ -74,22 +89,25 @@ export class TTS_Provider {
 
         this.llSocket.onclose = (event) => {
             console.log("🔒 ElevenLabs socket closed", event.reason);
+            console.log(event.code)
+            console.log(event.target)
             onSTTEvent({type: AudioModelResponseType.CLOSED, data: "ElevenLabs socket closed"})
             clearInterval(this.heartbeatInterval as ReturnType<typeof setInterval>);
             //ws.readyState === WebSocket.OPEN ? ws.close() : null;
         }
 
-        this.heartbeatInterval = setInterval(() => {
-            if (this.llSocket && this.llSocket.readyState === this.llSocket.OPEN) {
-              console.log("📤 Hearbeat sent to ElevenLabs");
-              this.llSocket.send(
-                JSON.stringify({
-                  text: ' ', 
-                  try_trigger_generation: false
-                })
-              );
-            }
-        }, 15000); 
+        // this.heartbeatInterval = setInterval(() => {
+        //     if (this.llSocket && this.llSocket.readyState === this.llSocket.OPEN) {
+        //       console.log("📤 Hearbeat sent to ElevenLabs");
+        //       //TODO: Heartbeat required in deepgram?
+        //       this.llSocket.send(
+        //         JSON.stringify({
+        //           text: ' ', 
+        //           try_trigger_generation: false
+        //         })
+        //       );
+        //     }
+        // }, 15000); 
     }
 
     
@@ -104,6 +122,7 @@ export class TTS_Provider {
 
             this.llSocket.send(
                 JSON.stringify({
+                    type: "Speak",
                     text: text_to_convert,
                 })
             );
@@ -119,12 +138,18 @@ export class TTS_Provider {
             if(!this.llSocket)
                 throw new AppError("ElevenLabs Socket Connection is not established, Please try again later", StatusCodes.INTERNAL_SERVER_ERROR)
 
+            
             this.llSocket.send(
                 JSON.stringify({
-                    text: ' ',
-                    flush: true
+                    type: "Flush",
                 })
             );
+            // this.llSocket.send(
+            //     JSON.stringify({
+            //         text: ' ',
+            //         flush: true
+            //     })
+            // );
         }
         return true
     }
@@ -159,9 +184,9 @@ export class TTS_Provider {
         }
     }
 
-    setVoice(VOICE_ID : string){
-        this.VOICE_ID = VOICE_ID
-    }
+    // setVoice(VOICE_ID : string){
+    //     this.VOICE_ID = VOICE_ID
+    // }
 
     public isConnected(){
         return this.llSocket?.readyState === WebSocket.OPEN;

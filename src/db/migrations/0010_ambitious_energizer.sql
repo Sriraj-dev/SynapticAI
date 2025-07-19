@@ -1,0 +1,1 @@
+ALTER TABLE "payments" RENAME COLUMN "pre_tax_amount" TO "total_amount";

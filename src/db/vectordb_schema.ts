@@ -31,6 +31,8 @@ export const semanticNotes = pgTable(
       totalChunks: integer("total_chunks"),
   
       chunkIndex: integer("chunk_index"),
+
+      hash: text("hash"),
   
       embedding: vector("embedding", { dimensions: 768 }),
   

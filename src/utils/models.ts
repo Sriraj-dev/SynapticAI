@@ -1,5 +1,5 @@
 import { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { users , notes, tasks, noteAccess, userUsageMetrics} from "../db/schema";
+import { users , notes, tasks, noteAccess, userUsageMetrics, subscriptions, SubscriptionTier} from "../db/schema";
 import { semanticNotes } from "../db/vectordb_schema";
 
 //Users
@@ -32,3 +32,11 @@ export type NoteAccess = InferSelectModel<typeof noteAccess>
 //UsageMetrics
 export type NewUserUsageMetrics = InferInsertModel<typeof userUsageMetrics>
 export type UserUsageMetrics = InferSelectModel<typeof userUsageMetrics>
+
+//UserSubscriptions
+export type NewUserSubscription = InferInsertModel<typeof subscriptions>
+export type UserSubscription = InferSelectModel<typeof subscriptions>
+
+
+  
+

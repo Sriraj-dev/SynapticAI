@@ -12,7 +12,9 @@ notesRouter.use('*', authMiddleware)
 notesRouter.use("*", addSessionDetails)
 
 notesRouter.get("/", (c) => NotesController.getAllNotes(c))
-notesRouter.get("/:id", (c) => NotesController.getNoteById(c))
+
+notesRouter.delete("/delete", (c) => NotesController.deleteMultipleNotes(c))
+notesRouter.post("/update", (c) => NotesController.updateMultipleNotes(c))
 
 notesRouter.post("/create", async (c : Context) =>{
     const userId = c.get("userId")
@@ -23,8 +25,6 @@ notesRouter.post("/create", async (c : Context) =>{
     return c.json({ message: 'Succesfull', data : note}, StatusCodes.CREATED);
 })
 
-notesRouter.delete("/delete/:id", (c) => NotesController.deleteUserNote(c))
-notesRouter.post("/update/:id", (c) => NotesController.updateUserNote(c))
 
 notesRouter.get("/getAccessRequests", async (c : Context) => {
     const ownerId = c.get("userId")
@@ -62,6 +62,12 @@ notesRouter.post("/requestAccess", async (c : Context) => {
 
     return c.json({message: "Successfully Executed", data: request}, StatusCodes.OK)
 }) 
+
+notesRouter.delete("/embeddings/:id", (c) => NotesController.deleteUserNoteEmbeddings(c))
+
+notesRouter.get("/:id", (c) => NotesController.getNoteById(c))
+notesRouter.delete("/:id", (c)=> NotesController.deleteUserNote(c))
+notesRouter.patch("/:id", (c) => NotesController.updateUserNote(c))
 
 
 export default notesRouter;

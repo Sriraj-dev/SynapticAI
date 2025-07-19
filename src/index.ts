@@ -3,7 +3,7 @@ import { prettyJSON } from 'hono/pretty-json'
 import { logger } from 'hono/logger'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import callbackRouter from './routes/callback'
+import webhookRouter from './routes/webhooks'
 import notesRouter from './routes/notes'
 import { AppError } from './utils/errors'
 import { StatusCodes } from './utils/statusCodes'
@@ -11,6 +11,8 @@ import taskRouter from './routes/task'
 import askAIRouter from './routes/askAI'
 import {wsRouter, websocket} from './routes/audioWrapper'
 import { logMemory, patchConsoleLogWithTime } from './utils/utility_methods'
+import subscriptionsRouter from './routes/subscriptions'
+import userRouter from './routes/user'
 
 const app = new Hono()
 
@@ -24,7 +26,7 @@ app.use(
     //TODO, when frontend and chrome extension are deployed, we can modify the cors policy
     origin: '*',
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PATCH' ,'PUT', 'DELETE', 'OPTIONS'],
   })
 );
 
@@ -44,12 +46,36 @@ app.onError((err, c) => {
 logMemory("StartUp")
 app.get('/', (c) => c.text('Welcome to SynapticAI'))
 
+app.get('/test', async (c) => {
+  const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = c.req.query();
 
-app.route('/callback', callbackRouter)
+  if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+    console.log('WEBHOOK VERIFIED');
+    return c.body(challenge);
+  } else {
+    return c.status(403);
+  }
+});
+
+app.post('/test', async (c)=>{
+
+  const body = await c.req.json();
+  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`\n\nWebhook received ${timestamp}\n`);
+  console.log(body);
+  return c.body(null)
+})
+
+//TODO: Need to change callback url in clerk, once deployed.
+app.route('/webhooks', webhookRouter)
 app.route('/notes',notesRouter)
 app.route('/tasks', taskRouter)
+//TODO: Add endpoint to get the user usage metrics.
+//TODO: Add endpoints to get chat history and clear chat history
+app.route('/user', userRouter)
 app.route("/askAI", askAIRouter)
 app.route("/audioWrapper", wsRouter)
+app.route('/subscriptions', subscriptionsRouter)
 
 Bun.serve({
   fetch: app.fetch,

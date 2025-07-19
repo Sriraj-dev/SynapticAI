@@ -7,15 +7,15 @@ import { NotesController } from '../../controllers/notes.controller';
 import { NewTaskRequest, NoteCreateRequest } from '../../utils/apiModels/requestModels';
 import { TaskController } from '../../controllers/tasks.controller';
 import { LRUCache } from "lru-cache";
-import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer, similarity} from 'llamaindex'
+import {VectorStoreIndex, SummaryIndex, Settings, Document, getResponseSynthesizer} from 'llamaindex'
 import { MAX_TOKENS_PER_TOOL, websiteEmbeddingModel, websiteResearcher } from './aiModels';
 import { WebSiteAgentSummaryPrompt, WebsiteAgentQAPrompt} from './agentPrompts'
-import {YoutubeTranscript} from 'youtube-transcript'
 import { logMemory, truncateNotesByTokenLimit } from '../../utils/utility_methods';
 import * as cheerio from "cheerio";
 import { Note } from '../../utils/models';
 import puppeteer, { Browser } from 'puppeteer';
 import {TavilySearch} from "@langchain/tavily"
+import { fetchTranscriptFromPublicAPI } from '../../utils/yt_transcript_utils';
 
 // Cache to store the websites content, to avoid frequent scraping 
 //TODO: Figure out how to store this in redis like storage 
@@ -38,6 +38,7 @@ const qaResponseSynthesizer = getResponseSynthesizer('compact', {
 const summaryResponseSynthesizer = getResponseSynthesizer('compact', {
   textQATemplate: WebSiteAgentSummaryPrompt
 })
+
 
 export const getCurrentDate = new DynamicStructuredTool({
   name: 'get_current_date',
@@ -297,6 +298,7 @@ export const VideoQueryTool = new DynamicStructuredTool({
       return "Apologies, but we couldn't identify the specific video you're referring to. Please ensure the URL contains a valid video reference (e.g., 'v=' parameter)."
 
     const videoId = url.split('v=')[1].split('&')[0];
+    console.log("Video Id:", videoId);
     let vectorIndex : VectorStoreIndex;
     let summaryIndex : SummaryIndex;
 
@@ -306,9 +308,9 @@ export const VideoQueryTool = new DynamicStructuredTool({
         console.log("Using cached data for videoId:", url);
       }else{
           console.log("Cached data not available for this video")
-          const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-          const videoTranscript = transcript.map((item) => item.text).join(' ');
+          const videoTranscript = await fetchTranscriptFromPublicAPI(videoId);
 
+          
           if(!videoTranscript || videoTranscript.length == 0){
             //TODO : If couldnt find the transcript, get the videos audio and get transcript from whisper model
             return "Apologies, we couldn't retrieve the transcript for this video. The video may not have captions available, or an unexpected error occurred."
@@ -379,8 +381,12 @@ export const SemanticNoteSearchTool = new DynamicStructuredTool({
       .sort((a, b) => b.similarity - a.similarity)
       .map((note) => (`[\nSimilarity: ${note.similarity.toFixed(2)} %\nNote_Chunk: ${note.content}\nNote ID: ${note.note_id}\n]`));
 
-      const artifacts = semanticNotes.map((note) => note.note_id)
-      console.log(parsedResponse)
+      const artifacts = Array.from(
+        new Map(semanticNotes.map(note => [note.note_id, note])).values()
+      ).map(note => ({
+        url: note.note_id,
+        content: note.content,
+      }));
 
       return [parsedResponse.join('\n'), artifacts]
     }catch(err){
@@ -462,6 +468,19 @@ export async function getWebsiteContent(url: string) {
     let content = '';
 
     try {
+      const res = await fetch(url);
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      $('script, style, nav, header, footer, iframe, noscript').remove();
+      content = $('body').text().replace(/\s+/g, ' ').trim();
+      console.log("Cheerio (CSR) content fetched successfully");
+
+      return content;
+    } catch (err) {
+      console.error('Cheerio failed, Falling back to Puppeteer:', err);
+    }
+
+    try {
       const browser = await getOrCreateBrowser();
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 8000 });
@@ -475,20 +494,7 @@ export async function getWebsiteContent(url: string) {
       console.log("Puppeteer (SSR) content fetched successfully");
       return content;
     } catch (err) {
-      console.warn('Puppeteer failed, falling back to Cheerio:', err);
-    }
-
-    try {
-      const res = await fetch(url);
-      const html = await res.text();
-      const $ = cheerio.load(html);
-      $('script, style, nav, header, footer, iframe, noscript').remove();
-      content = $('body').text().replace(/\s+/g, ' ').trim();
-      console.log("Cheerio (CSR) content fetched successfully");
-
-      return content;
-    } catch (err) {
-      console.error('Cheerio also failed:', err);
+      console.warn('Puppeteer also failed', err);
       return '';
     }
 }

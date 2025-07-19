@@ -3,8 +3,6 @@ import { AnyColumn, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index' 
 import { SubscriptionTier, users, userUsageMetrics } from '../db/schema'
 import { NewUser , NewUserUsageMetrics, User, UserUsageMetrics} from '../utils/models';
-import { time } from 'console';
-import { timestamp } from 'drizzle-orm/gel-core';
 
 export const UsersRepository = {
     
@@ -15,6 +13,16 @@ export const UsersRepository = {
         }catch(err){
             console.log("Unable to add the new user to neon database : ",err)
             throw err;
+        }
+    },
+
+    async updateUserDetails(user : User){
+        try{
+            const updatedUser = await db.update(users).set(user).where(eq(users.uid, user.uid)).returning()
+
+            return updatedUser[0]
+        }catch(err){
+            throw err
         }
     },
 
@@ -96,6 +104,30 @@ export const UsersRepository = {
             console.log("Unable to increment user usage metrics in neon database : ", err);
             throw err;
         }
+    },
+
+    async updateUserUsageMetricsLimit(userId:string, subscription_tier: SubscriptionTier, embedded_tokens_limit?: number, daily_chat_tokens_limit?: number, daily_voice_tokens_limit?: number, daily_internet_calls_limit?: number, daily_semantic_queries_limit?: number) : Promise<UserUsageMetrics> {
+        try{
+            const updatedFields = {} as UserUsageMetrics;
+            updatedFields.subscription_tier = subscription_tier;
+            if(embedded_tokens_limit != null)
+                updatedFields.embedded_tokens_limit = embedded_tokens_limit;
+            if(daily_chat_tokens_limit != null)
+                updatedFields.daily_chat_tokens_limit = daily_chat_tokens_limit;
+            if(daily_voice_tokens_limit != null)
+                updatedFields.daily_voice_tokens_limit = daily_voice_tokens_limit;
+            if(daily_internet_calls_limit != null)
+                updatedFields.daily_internet_calls_limit = daily_internet_calls_limit;
+            if(daily_semantic_queries_limit != null)
+                updatedFields.daily_semantic_queries_limit = daily_semantic_queries_limit;
+
+            const userMetrics = await db.update(userUsageMetrics).set(updatedFields).where(eq(userUsageMetrics.userId, userId)).returning()
+
+            return userMetrics[0]
+        }catch(err){
+            throw err;
+        }
     }
+
 
 }

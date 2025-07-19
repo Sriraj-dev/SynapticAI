@@ -1,7 +1,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { OpenAI, OpenAIEmbedding } from "llamaindex";  
 
-//TODO: Give a choice of models to users to choose from
+
 //Can replace with Deepseek model to save costs
 //May be we can replace with 4.1-nano as well
 export const rootModel =  new ChatOpenAI({
@@ -23,7 +23,7 @@ export const websiteResearcher = new OpenAI({
   temperature:0.4
 })
 
-//TODO: Can we  use huggingface opensource embeddings models for this purpose?
+// Can we  use huggingface opensource embeddings models for this purpose?
 export const websiteEmbeddingModel = new OpenAIEmbedding({
   model:'text-embedding-3-small',
   apiKey: process.env.OPENAI_API_KEY,

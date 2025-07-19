@@ -33,13 +33,15 @@ taskRouter.post("/create", async (c : Context) => {
     }, 200)
 })
 
-taskRouter.post("/update", async (c : Context) => {
+//TODO: take the task id as path params
+taskRouter.post("/update/:id", async (c : Context) => {
     const userId = c.get('userId')
+    const taskId = c.req.param('id')
 
     const body = await c.req.json<UpdateTaskRequest>()
-    body.owner_id = userId
 
-    const task = await TaskController.updateTask(body)
+    //TODO: User can update only a particular part of the task,
+    const task = await TaskController.updateTask(body, taskId)
 
     return c.json({
         message : "Success",

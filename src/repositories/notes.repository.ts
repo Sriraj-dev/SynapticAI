@@ -1,7 +1,7 @@
 
-import { eq, gte, lte, sql } from 'drizzle-orm'
+import { eq, exists, gte, inArray, lte, sql } from 'drizzle-orm'
 import { db } from '../db/index'
-import {AccessLevel, AccessStatus, noteAccess, notes, users} from '../db/schema'
+import {AccessLevel, AccessStatus, noteAccess, notes, NoteStatusLevel, users} from '../db/schema'
 import { NewNote, Note, NoteAccess, SemanticNote, SemanticSearchResponse } from '../utils/models'
 import { and } from 'drizzle-orm'
 
@@ -63,18 +63,19 @@ export const NotesRepository = {
         }
     },
 
-    async getNoteAccess(userId : string, noteId : string) : Promise<AccessLevel> {
+    async getNoteAccess(userId : string, noteId : string) : Promise<[AccessLevel, string | null]> {
         try{
             const access_level = await db.select({access : noteAccess.access_level, ownerId : noteAccess.owner_id}).from(noteAccess)
                 .where(and(eq(noteAccess.user_id, userId),eq(noteAccess.note_id,noteId))).limit(1)
             
             if(access_level.length === 0){
-                return AccessLevel.Denied
+                return [AccessLevel.Denied, null];
             }
-            if(access_level[0].ownerId === userId) return AccessLevel.Owner
-            if(access_level[0].access === AccessStatus.Pending) return AccessLevel.Denied
+
+            if(access_level[0].ownerId === userId) return [AccessLevel.Owner, userId]
+            if(access_level[0].access === AccessStatus.Pending) return [AccessLevel.Denied, access_level[0].ownerId]
             
-            return access_level[0].access as AccessLevel
+            return [access_level[0].access as AccessLevel, access_level[0].ownerId];
         }catch(err){
             console.log(`Unable to get the note access for the user : ${userId}, Error : ${err}`)
             throw err;
@@ -91,9 +92,14 @@ export const NotesRepository = {
         }
     },
 
-    async updateNote(id: string, note: Note) : Promise<Note>{
+    async updateNote(id: string, note: Partial<Note>) : Promise<Note>{
         try{
-            const updatedNote = await db.update(notes).set(note).where(eq(notes.uid, id)).returning()
+            const updatedNote = await db.update(notes).set(
+                {
+                    ...note, 
+                    status: NoteStatusLevel.Memorizing
+                }
+            ).where(eq(notes.uid, id)).returning()
             return updatedNote[0]    
         }catch(err){
             console.log(`Unable to update the note for the id : ${id}, Error : ${err}`)
@@ -101,12 +107,40 @@ export const NotesRepository = {
         }
     },
 
-    async deleteNote(id: string) : Promise<Note> {
+    async updateMultipleNotes(
+        updates: { id: string; note: Partial<Note> }[]
+      ): Promise<Note[]> {
+        try {
+            const results: Note[] = [];
+
+            for (const { id, note } of updates) {
+                const updatedNote = await db
+                .update(notes)
+                .set({
+                    ...note,
+                    updatedAt: new Date(),
+                })
+                .where(eq(notes.uid, id))
+                .returning();
+
+                if (updatedNote.length > 0) {
+                    results.push(updatedNote[0]);
+                }
+            }
+
+            return results;
+        } catch (err) {
+          console.error(`Unable to update notes. Error: ${err}`);
+          throw err;
+        }
+    },
+
+    async deleteNotes(ids: string[]) : Promise<Note[]> {
         try{
-            const deletedNote = await db.delete(notes).where(eq(notes.uid, id)).returning()
-            return deletedNote[0]
-        }catch(err){
-            console.log(`Unable to delete the note for the id : ${id}, Error : ${err}`)
+            const deletedNotes = await db.delete(notes).where(inArray(notes.uid, ids)).returning()
+            return deletedNotes
+        }catch (err) {
+            console.log(`Unable to delete the notes for ids: ${ids.join(', ')}, Error: ${err}`);
             throw err;
         }
     },

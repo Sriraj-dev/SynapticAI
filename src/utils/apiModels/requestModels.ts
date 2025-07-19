@@ -1,12 +1,11 @@
 import { AccessLevel, AccessStatus, TaskStatusLevel } from "../../db/schema"
+import { Note } from "../models"
 
 
 export type NoteUpdateRequest = {
-    noteId : string,
-    userId : string,
     title?: string,
     content?: string,
-    folder? : string
+    generateEmbeddings : boolean 
 }
 
 export type NoteCreateRequest = {
@@ -25,8 +24,6 @@ export type NewTaskRequest = {
 }
 
 export type UpdateTaskRequest = {
-    uid : string,
-    owner_id? : string,
     status? : TaskStatusLevel,
     content? : string,
     title? :string,
@@ -55,3 +52,13 @@ export type AgentRequest = {
     url?: string,
     context?: string,
 }
+
+// For updating mutliple notes
+export type UpdateNotePayload = {
+    id: string;
+    note: Partial<Note>;
+};
+
+export type UpdateNotesMetaDataRequestBody = {
+    updates: UpdateNotePayload[];
+};

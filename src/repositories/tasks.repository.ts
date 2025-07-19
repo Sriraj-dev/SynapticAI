@@ -39,9 +39,9 @@ export const TaskRepository = {
         }
     },
 
-    async updateTask(task : Task) : Promise<Task>{
+    async updateTask(task : Task, taskId : string) : Promise<Task>{
         try{
-            const updatedTask = await db.update(tasks).set(task).where(eq(tasks.uid, task.uid)).returning()
+            const updatedTask = await db.update(tasks).set(task).where(eq(tasks.uid, taskId)).returning()
 
             return updatedTask[0]
         }catch(err){

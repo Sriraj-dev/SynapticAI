@@ -46,7 +46,7 @@ export class STT_Provider{
         });
 
         this.dgSocket.onopen = async ()=>{
-            console.log("🔌 Deepgram socket connected");
+            console.log("🔌 Deepgram TTS socket connected");
             onSTTEvent({type: AudioModelResponseType.CONNECTED, data: "Connected to Deepgram! Ready to receive audio events!"})
         }
 
