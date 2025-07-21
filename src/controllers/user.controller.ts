@@ -8,10 +8,10 @@ export const UserController = {
 
     //TODO: Do not give an option to change email if once created account from clerk.
     async userSignUp(c : Context){
-            
+
+        console.log("New User Logged In!")
         const payload = await c.req.json();
         const user = payload.data;
-
         const {
             id: userId,
             email_addresses: [{ email_address: email } = {}],
@@ -21,7 +21,9 @@ export const UserController = {
             username = ''
         } = user;
 
+        
         try{
+            console.log("Checking if he is existing user")
             const existingUser = await UsersRepository.getUserById(userId)
 
             if(existingUser){

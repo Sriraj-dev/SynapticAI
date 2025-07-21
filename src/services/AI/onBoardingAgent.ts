@@ -19,7 +19,7 @@ export class OnBoardingAgent {
             const newMessage = new HumanMessage(userMessage)
             this.messages.push(newMessage)
 
-            const stream = await onBoardingAssistant.stream([this.systemMessage, ...this.messages])
+            const stream = await onBoardingAssistant.stream([this.systemMessage, new AIMessage("Hello there, Welcome to Synaptic AI! How may I assist you today?"),...this.messages])
 
             let response = ""
 

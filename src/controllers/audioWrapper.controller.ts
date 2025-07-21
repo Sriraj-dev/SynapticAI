@@ -2,7 +2,7 @@ import { WSContext } from "hono/ws";
 import { AudioModelResponse, AudioModelResponseType } from "../utils/audioWrapperModels/responseModels";
 import { STT_Provider } from "../services/STT_Provider/STTProvider";
 import { OnBoardingAgent } from "../services/AI/onBoardingAgent";
-import { OnBoardingAgentSystemPrompt } from "../services/AI/agentPrompts";
+import { newOnBoardingAgentPrompt, OnBoardingAgentSystemPrompt } from "../services/AI/agentPrompts";
 import { TTS_Provider } from "../services/TTS_Provider/TTSProvider";
 import { AppError } from "../utils/errors";
 import { StatusCodes } from "../utils/statusCodes";
@@ -133,7 +133,7 @@ export const greetingAgentHandler : any = () => {
             console.log('WebSocket connection opened');
 
             sttProvider = new STT_Provider(DEEPGRAM_API_KEY);
-            onBoardingAgent = new OnBoardingAgent(OnBoardingAgentSystemPrompt);
+            onBoardingAgent = new OnBoardingAgent(newOnBoardingAgentPrompt);
             ttsProvider = new TTS_Provider(DEEPGRAM_API_KEY, SynapticAIVoices["Eryn (Female)"], true)
 
             sttProvider.connect(ws, (event) => handleSTTEvents(event, ws, buildUserMessage, processUserRequest))
