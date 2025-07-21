@@ -53,7 +53,6 @@ export class TTS_Provider {
 
         this.llSocket.onmessage = (event) => {
             //TODO: Change the receiveing func as per deepgram.
-            console.log(event)
             if(event.type == "message"){
                 if(event.data instanceof Buffer){
                     console.log("🔊 Received message from Deepgram:")
