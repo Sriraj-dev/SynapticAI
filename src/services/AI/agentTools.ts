@@ -143,7 +143,7 @@ export const addNote = new DynamicStructuredTool({
   name: 'add_note',
   description: 'Adds a note to the database',
   schema: z.object({
-    content: z.string().describe('The content of the note to be added to the database'),
+    content: z.string().describe('The content of the note to be added to the database. Try to give it in a proper markdown format by using unordered or ordered lists, code elements where ever necessary'),
     title :z.string().describe('The title of the note'),
     userMessage: z.string().describe("Message to keep the user engaged while this tool runs")
   }),
