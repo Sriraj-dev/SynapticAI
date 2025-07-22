@@ -47,6 +47,7 @@ logMemory("StartUp")
 app.get('/', (c) => c.text('Welcome to SynapticAI'))
 
 app.get('/test', async (c) => {
+  console.log("*********************************")
   const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = c.req.query();
 
   if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
